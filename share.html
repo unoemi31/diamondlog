@@ -2,10 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Diamond Log | 少年野球 打撃成績＆リアルタイム共有</title>
-
-  <link rel="apple-touch-icon" href="icon.png">
 
   <!-- iOS / Android PWA 全画面スタンドアロン設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,7 +11,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Diamond Log" />
   <meta name="theme-color" content="#0f172a" />
-  
+  <link rel="apple-touch-icon" href="icon.png" />
+  <link rel="icon" type="image/png" href="icon.png" />
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
   <script>
@@ -51,13 +51,15 @@
     }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .header-safe-top {
+      padding-top: calc(env(safe-area-inset-top, 10px) + 10px);
+    }
     .pb-safe-main {
       padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 96px);
     }
     .nav-safe-bottom {
       padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 12px);
     }
-    /* iOS風ドラムロールダイヤル */
     .wheel-column {
       scroll-snap-type: y mandatory;
       overflow-y: scroll;
@@ -76,6 +78,73 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+
+    /* ▼▼ テーマカラー着せ替え用 CSS変数＆オーバーライド ▼▼ */
+    :root {
+      --theme-main: #0f172a;
+      --theme-main-sub: #1e293b;
+      --theme-accent: #10b981;
+      --theme-accent-text: #059669;
+      --theme-accent-contrast: #080d1a;
+      --theme-light: #d1fae5;
+      --theme-border: rgba(52, 211, 153, 0.35);
+    }
+
+    header.bg-navy-900,
+    #game-modal .bg-navy-900,
+    #atbat-picker-modal .bg-navy-900,
+    #toast.bg-navy-900 {
+      background-color: var(--theme-main) !important;
+      transition: background-color 0.25s ease;
+    }
+
+    #tab-stats .from-navy-900,
+    #tab-settings .from-navy-900,
+    #game-modal .from-navy-900 {
+      background-image: linear-gradient(135deg, var(--theme-main), var(--theme-main-sub)) !important;
+    }
+
+    .bg-turf-500,
+    .from-turf-400.to-turf-600 {
+      background-color: var(--theme-accent) !important;
+      background-image: none !important;
+      color: var(--theme-accent-contrast) !important;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .bg-turf-400 {
+      background-color: var(--theme-accent) !important;
+    }
+
+    .text-turf-400 {
+      color: var(--theme-accent) !important;
+    }
+
+    .text-turf-600 {
+      color: var(--theme-accent-text) !important;
+    }
+
+    .bg-turf-100 {
+      background-color: var(--theme-light) !important;
+    }
+
+    .nav-btn.active {
+      color: var(--theme-main) !important;
+    }
+
+    .stype-btn.active {
+      background-color: var(--theme-main) !important;
+      color: #ffffff !important;
+    }
+
+    #spray-bar-left {
+      background-color: var(--theme-accent) !important;
+    }
+
+    #sync-badge,
+    #share-card-modal .border-turf-400\/40 {
+      border-color: var(--theme-border) !important;
+    }
   </style>
 </head>
 <body class="antialiased select-none">
@@ -84,9 +153,8 @@
   <div id="app" class="max-w-lg mx-auto min-h-screen bg-slate-100 relative shadow-2xl flex flex-col">
 
     <!-- トップヘッダー -->
-    <header class="sticky top-0 z-30 bg-navy-900 text-white px-3.5 py-3 shadow-lg border-b border-white/10">
+    <header class="sticky top-0 z-30 bg-navy-900 text-white px-3.5 pb-3 header-safe-top shadow-lg border-b border-white/10">
       <div class="flex items-center justify-between gap-2">
-        <!-- 左：アプリタイトル＆選手・所属チーム概要 -->
         <div class="flex items-center space-x-2.5 min-w-0 flex-1">
           <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-turf-400 to-turf-600 flex items-center justify-center shadow-inner shrink-0">
             <svg class="w-5 h-5 text-navy-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
@@ -107,7 +175,6 @@
           </div>
         </div>
 
-        <!-- 右：同期バッジ & ＋試合追加ボタン -->
         <div class="flex items-center space-x-1.5 shrink-0">
           <button type="button" onclick="switchTab('settings')" id="sync-badge" class="flex items-center space-x-1.5 bg-navy-800 hover:bg-navy-700 border border-white/15 px-2.5 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap shrink-0 transition">
             <span id="sync-dot" class="w-2 h-2 rounded-full bg-turf-400 shrink-0"></span>
@@ -126,7 +193,6 @@
 
       <!-- ==================== 1. 試合一覧タブ ==================== -->
       <section id="tab-games" class="p-4 space-y-3.5 animate-fade-in">
-        <!-- 集計範囲フィルター -->
         <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
           <div class="flex items-center justify-between gap-2">
             <span class="text-[11px] font-extrabold text-slate-500 flex items-center gap-1 whitespace-nowrap">
@@ -147,13 +213,11 @@
           </div>
         </div>
 
-        <!-- 試合カードリスト -->
         <div id="games-list-container" class="space-y-3"></div>
       </section>
 
       <!-- ==================== 2. 打撃成績タブ ==================== -->
       <section id="tab-stats" class="p-4 space-y-4 hidden animate-fade-in">
-        <!-- 集計範囲フィルター＆シェア -->
         <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
           <div class="flex items-center justify-between gap-2">
             <span class="text-[11px] font-extrabold text-slate-500 flex items-center gap-1 whitespace-nowrap">
@@ -176,7 +240,6 @@
           </div>
         </div>
 
-        <!-- 試合成績サマリーバー -->
         <div class="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-4 text-white shadow-md flex items-center justify-between border border-white/10">
           <div>
             <p class="text-[10px] font-extrabold text-turf-400 uppercase tracking-wider">TEAM RECORD / 試合成績</p>
@@ -188,7 +251,6 @@
           </div>
         </div>
 
-        <!-- 主要4指標カード -->
         <div class="grid grid-cols-2 gap-3">
           <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 relative overflow-hidden">
             <div class="absolute right-0 top-0 w-16 h-16 bg-turf-500/10 rounded-bl-full"></div>
@@ -212,7 +274,6 @@
           </div>
         </div>
 
-        <!-- 詳細成績18項目グリッド -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80">
           <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3">BATTING DETAILS / 詳細成績一覧</h3>
           <div class="grid grid-cols-3 gap-2.5" id="detailed-stats-grid"></div>
@@ -221,7 +282,6 @@
 
       <!-- ==================== 3. 打球分析タブ ==================== -->
       <section id="tab-spray" class="p-4 space-y-4 hidden animate-fade-in">
-        <!-- 集計範囲フィルター -->
         <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
           <div class="grid grid-cols-2 gap-2">
             <select id="filter-spray-team" onchange="syncTeamFilter(this.value)" class="w-full bg-slate-100 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-turf-500">
@@ -232,7 +292,6 @@
               <svg class="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
             </button>
           </div>
-          <!-- 結果種別フィルター -->
           <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1" id="spray-type-filters">
             <button type="button" data-stype="all" class="stype-btn active px-3 py-1.5 rounded-xl text-xs font-extrabold bg-navy-900 text-white whitespace-nowrap transition">すべて表示</button>
             <button type="button" data-stype="hits" class="stype-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 whitespace-nowrap transition">安打のみ</button>
@@ -241,14 +300,12 @@
           </div>
         </div>
 
-        <!-- スプレーチャートカード -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80">
           <div class="flex items-center justify-between mb-2">
             <h2 class="text-sm font-black text-navy-900">打球方向スプレーチャート</h2>
             <span id="spray-tendency-badge" class="text-[11px] font-extrabold bg-turf-100 text-turf-600 px-2.5 py-1 rounded-full whitespace-nowrap">打球記録待ち</span>
           </div>
 
-          <!-- 凡例 -->
           <div class="flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold bg-slate-50 py-2 px-3 rounded-xl border border-slate-200/70 mb-3">
             <span class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded-full bg-rose-500 inline-block"></span>本塁打</span>
             <span class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded-full bg-orange-500 inline-block"></span>二・三塁打</span>
@@ -256,7 +313,6 @@
             <span class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded-full bg-slate-400 inline-block"></span>凡退</span>
           </div>
 
-          <!-- 野球場SVG -->
           <div class="relative w-full aspect-[1/0.94] bg-emerald-950 rounded-2xl overflow-hidden shadow-inner border-2 border-emerald-800">
             <svg id="spray-chart-svg" viewBox="0 0 360 340" class="w-full h-full">
               <defs>
@@ -267,21 +323,14 @@
                 </radialGradient>
               </defs>
               <rect width="360" height="340" fill="#022c22" />
-              <!-- 外野芝生 -->
               <path d="M 180 310 L 25 155 A 220 220 0 0 1 335 155 Z" fill="url(#turfGradMain)" />
-              <!-- 外野フェンス -->
               <path d="M 25 155 A 220 220 0 0 1 335 155" fill="none" stroke="#facc15" stroke-width="3.5" stroke-linecap="round"/>
-              <!-- 内野の土 -->
               <path d="M 180 310 L 102 232 A 110 110 0 0 1 258 232 Z" fill="#d9a066" />
-              <!-- 内野芝生 -->
               <polygon points="180,295 128,243 180,191 232,243" fill="#059669" />
-              <!-- マウンド -->
               <circle cx="180" cy="245" r="10" fill="#d9a066" />
               <rect x="176" y="244" width="8" height="2.5" fill="#ffffff" />
-              <!-- ファウルライン -->
               <line x1="180" y1="310" x2="25" y2="155" stroke="#ffffff" stroke-width="2" opacity="0.9"/>
               <line x1="180" y1="310" x2="335" y2="155" stroke="#ffffff" stroke-width="2" opacity="0.9"/>
-              <!-- ベース -->
               <polygon points="180,313 176,309 176,305 184,305 184,309" fill="#ffffff" />
               <rect x="229" y="240" width="7" height="7" transform="rotate(45 232.5 243.5)" fill="#ffffff" />
               <rect x="176.5" y="187.5" width="7" height="7" transform="rotate(45 180 191)" fill="#ffffff" />
@@ -289,12 +338,10 @@
               <text x="180" y="70" text-anchor="middle" fill="#ffffff" opacity="0.45" font-size="10" font-weight="bold">CENTER</text>
               <text x="72" y="125" text-anchor="middle" fill="#ffffff" opacity="0.45" font-size="10" font-weight="bold">LEFT</text>
               <text x="288" y="125" text-anchor="middle" fill="#ffffff" opacity="0.45" font-size="10" font-weight="bold">RIGHT</text>
-              <!-- 打球軌跡レイヤー -->
               <g id="spray-lines-layer"></g>
             </svg>
           </div>
 
-          <!-- 方向別打球割合バー -->
           <div class="mt-4 space-y-2">
             <div class="flex justify-between text-xs font-extrabold text-slate-600">
               <span>レフト方向 <span id="spray-left-pct" class="text-navy-900">0%</span></span>
@@ -310,40 +357,38 @@
         </div>
       </section>
 
-      <!-- ==================== 4. 共有・設定タブ ==================== -->
+      <!-- ==================== 4. 共有・設定タブ（指定の順番） ==================== -->
       <section id="tab-settings" class="p-4 space-y-4 hidden animate-fade-in">
-        <!-- リアルタイムデータ共有カード -->
+        <!-- 1) リアルタイムデータ共有カード -->
         <div class="bg-gradient-to-br from-navy-900 to-navy-800 rounded-2xl p-4 text-white shadow-md border border-white/10 space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full bg-turf-400"></span>
-              <h2 class="text-sm font-black">家族・メンバー間のリアルタイム共有</h2>
+              <h2 class="text-sm font-black">リアルタイムデータ共有（iPhone連携）</h2>
             </div>
             <span id="settings-sync-status" class="text-[10px] font-extrabold bg-white/10 text-turf-400 px-2.5 py-0.5 rounded-full">同期完了</span>
           </div>
           <p class="text-xs text-slate-300 leading-relaxed">
             下の<strong>「共有URLをコピー」</strong>からリンクを家族に送るか、<strong>「共有ルームID」</strong>をもう一方のiPhoneで入力して接続すると、試合記録がリアルタイムで自動同期されます。
           </p>
-          <div class="bg-navy-950/60 border border-white/15 rounded-xl p-3 space-y-2.5">
-            <div class="flex items-center justify-between gap-2">
-              <div>
-                <span class="text-[10px] font-bold text-slate-400 block">現在の共有ルームID</span>
-                <span id="current-room-id-display" class="text-base font-black tracking-wider text-turf-400 font-display">DL-XXXXXX</span>
-              </div>
-              <button type="button" onclick="copyShareUrl()" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-3.5 py-2 rounded-xl whitespace-nowrap active:scale-95 transition">
-                共有URLをコピー
-              </button>
+          <div class="bg-navy-950/60 border border-white/15 rounded-xl p-3 flex items-center justify-between gap-2">
+            <div>
+              <span class="text-[10px] font-bold text-slate-400 block">現在の共有ルームID</span>
+              <span id="current-room-id-display" class="text-base font-black tracking-wider text-turf-400 font-display">DL-XXXXXX</span>
             </div>
+            <button type="button" onclick="copyShareUrl()" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-3.5 py-2 rounded-xl whitespace-nowrap active:scale-95 transition">
+              共有URLをコピー
+            </button>
           </div>
           <div class="pt-1 flex gap-2">
-            <input type="text" id="join-room-input" placeholder="別のルームIDを入力して接続" class="flex-1 bg-white/10 border border-white/15 rounded-xl px-3 py-2.5 text-xs font-bold text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-turf-400 uppercase" />
+            <input type="text" id="join-room-input" placeholder="別のルームIDを入力して変更・接続" class="flex-1 bg-white/10 border border-white/15 rounded-xl px-3 py-2.5 text-xs font-bold text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-turf-400 uppercase" />
             <button type="button" onclick="joinRoom()" class="bg-white text-navy-900 hover:bg-slate-100 font-black text-xs px-4 py-2.5 rounded-xl whitespace-nowrap active:scale-95 transition">
-              接続する
+              変更・接続
             </button>
           </div>
         </div>
 
-        <!-- 選手プロフィール設定 -->
+        <!-- 2) 選手プロフィール設定 -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
           <h3 class="text-sm font-black text-navy-900">選手プロフィール設定</h3>
           <div class="grid grid-cols-3 gap-2.5">
@@ -361,7 +406,7 @@
           </button>
         </div>
 
-        <!-- 複数所属チームの管理（略称4文字まで＆正式名称） -->
+        <!-- 3) 複数所属チームの管理（略称4文字まで＆正式名称） -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-black text-navy-900">所属チーム管理（略称4文字まで）</h3>
@@ -380,9 +425,35 @@
           </div>
         </div>
 
-        <!-- データ管理（JSON書き出し＆読み込み） -->
+        <!-- 4) テーマカラー着せ替えカード -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
-          <h3 class="text-sm font-black text-navy-900">データバックアップ（JSON書き出し・読み込み）</h3>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-black text-navy-900">🎨 テーマカラー（チームカラー）</h3>
+              <p class="text-[11px] text-slate-500 mt-0.5">タップするとアプリ全体の配色がリアルタイムに切り替わります</p>
+            </div>
+            <span id="current-theme-badge" class="text-[10px] font-black bg-turf-100 text-turf-600 px-2.5 py-1 rounded-full whitespace-nowrap">フィールドグリーン</span>
+          </div>
+          <div id="theme-palette-grid" class="grid grid-cols-3 gap-2"></div>
+        </div>
+
+        <!-- 5) PWA 全画面アプリ化ガイドカード -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-navy-900 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-turf-500"></span>
+              iPhone全画面アプリ化（URLバー非表示）
+            </h3>
+            <span class="text-[10px] font-extrabold bg-turf-100 text-turf-600 px-2 py-0.5 rounded-full">PWA対応済</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Safariの下部にある<strong>「共有ボタン（□に↑）」</strong>から<strong>「ホーム画面に追加」</strong>をタップすると、URLバーが消えた全画面アプリ（Diamond Log アイコン付き）として起動します。
+          </p>
+        </div>
+
+        <!-- 6) データ管理・移行 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+          <h3 class="text-sm font-black text-navy-900">データ管理・移行（JSON書き出し・読み込み）</h3>
           <div class="grid grid-cols-2 gap-2.5">
             <button type="button" onclick="exportDataJson()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-3 px-3 rounded-xl flex items-center justify-center gap-1.5 transition">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -431,7 +502,6 @@
         <button type="button" onclick="applyPeriodDialSelection()" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-4 py-1.5 rounded-xl">適用する</button>
       </div>
 
-      <!-- クイックプリセット -->
       <div class="grid grid-cols-3 gap-2">
         <button type="button" id="preset-all-btn" onclick="selectPeriodPreset('all')" class="py-2.5 px-2 rounded-xl text-xs font-black border transition">
           全期間
@@ -444,7 +514,6 @@
         </button>
       </div>
 
-      <!-- 2連ドラムロールダイヤル（開始年・開始月） -->
       <div class="space-y-1.5">
         <div class="flex items-center justify-between px-1">
           <span class="text-xs font-extrabold text-slate-500">開始年月をダイヤルで指定</span>
@@ -452,13 +521,8 @@
         </div>
 
         <div class="relative h-[200px] bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden grid grid-cols-2">
-          <!-- 中央選択ハイライトバー -->
           <div class="pointer-events-none absolute inset-x-3 top-1/2 -translate-y-1/2 h-[40px] bg-navy-900/10 border-y-2 border-turf-500 rounded-xl z-10"></div>
-
-          <!-- 左ドラム：開始年 -->
           <div id="wheel-year" onscroll="handleWheelScroll('year')" class="wheel-column no-scrollbar py-[80px] text-center z-20"></div>
-
-          <!-- 右ドラム：開始月 -->
           <div id="wheel-month" onscroll="handleWheelScroll('month')" class="wheel-column no-scrollbar py-[80px] text-center z-20 border-l border-slate-200/70"></div>
         </div>
       </div>
@@ -468,7 +532,6 @@
   <!-- ==================== 試合・打席入力モーダル ==================== -->
   <div id="game-modal" class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm hidden flex flex-col justify-end sm:justify-center">
     <div class="bg-slate-100 w-full max-w-lg mx-auto h-[94vh] sm:h-[90vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl">
-      <!-- モーダルヘッダー -->
       <div class="bg-navy-900 text-white px-4 py-3.5 flex items-center justify-between shrink-0">
         <button type="button" onclick="closeGameModal()" class="text-slate-300 hover:text-white text-xs font-extrabold px-2.5 py-1.5 rounded-lg">キャンセル</button>
         <h2 id="game-modal-title" class="text-sm font-black">試合結果・打席入力</h2>
@@ -477,11 +540,9 @@
         </button>
       </div>
 
-      <!-- フォーム本体 -->
       <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-12">
         <input type="hidden" id="edit-game-id" value="" />
 
-        <!-- 出場チーム選択カード（複数所属対応） -->
         <div class="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-3.5 text-white shadow-sm space-y-2">
           <div class="flex items-center justify-between">
             <label class="text-xs font-black text-turf-400">出場チーム（どのチームでの試合？）</label>
@@ -490,7 +551,6 @@
           <div id="form-myteam-selector" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
         </div>
 
-        <!-- 基本試合情報カード -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3.5">
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -512,7 +572,6 @@
             <div id="opponent-history-chips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar mt-2"></div>
           </div>
 
-          <!-- スコア＆勝敗自動判定プレビュー -->
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="text-xs font-bold text-slate-500">スコア（自チーム vs 相手）</label>
@@ -551,7 +610,6 @@
               </select>
             </div>
 
-            <!-- 複数ポジション（守備位置変更）の順番記録エリア -->
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
               <div class="flex items-center justify-between">
                 <label class="text-xs font-black text-navy-900">守備位置（試合中の交代順に追加）</label>
@@ -569,7 +627,6 @@
           </div>
         </div>
 
-        <!-- 打席結果カード -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-black text-navy-900">打撃成績（第1打席〜）</h3>
@@ -580,7 +637,6 @@
           <div id="form-atbats-list" class="space-y-2"></div>
         </div>
 
-        <!-- 打点・得点・盗塁・失策＆メモ -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3.5">
           <h3 class="text-sm font-black text-navy-900">個人記録・試合メモ</h3>
           <div class="grid grid-cols-2 gap-2.5" id="form-steppers-container"></div>
@@ -590,7 +646,6 @@
           </div>
         </div>
 
-        <!-- 削除ボタン（編集時のみ表示） -->
         <div id="delete-game-container" class="hidden pt-2">
           <button type="button" onclick="deleteCurrentGame()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-extrabold text-xs py-3 rounded-xl border border-rose-200 transition">
             この試合データを削除する
@@ -610,7 +665,6 @@
       </div>
 
       <div class="flex-1 overflow-y-auto p-4 space-y-4">
-        <!-- STEP 1: 打球方向選択＆ミニグラウンド微調整 -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-black text-navy-900">① 打球方向を選択（または下の図をタップ）</span>
@@ -618,7 +672,6 @@
           </div>
           <div id="picker-directions" class="grid grid-cols-4 gap-1.5"></div>
 
-          <!-- 打球位置微調整ミニグラウンド -->
           <div class="bg-emerald-950 rounded-2xl p-2 border border-emerald-800 flex items-center gap-3">
             <svg id="mini-field-svg" onclick="handleMiniFieldTap(event)" viewBox="0 0 200 180" class="w-36 h-32 shrink-0 rounded-xl bg-emerald-900 cursor-crosshair">
               <path d="M 100 165 L 15 80 A 120 120 0 0 1 185 80 Z" fill="#059669" />
@@ -637,7 +690,6 @@
           </div>
         </div>
 
-        <!-- STEP 2: 打席結果タップ（即決定） -->
         <div class="space-y-2 pb-4">
           <span class="text-xs font-black text-navy-900 block">② 打席結果をタップして確定</span>
           <div id="picker-outcomes" class="grid grid-cols-3 gap-2"></div>
@@ -646,7 +698,7 @@
     </div>
   </div>
 
-  <!-- ==================== 画像風成績シェアカードモーダル ==================== -->
+  <!-- ==================== 成績シェアカードモーダル ==================== -->
   <div id="share-card-modal" class="fixed inset-0 z-[65] bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="w-full max-w-sm space-y-3 animate-fade-in">
       <div class="bg-gradient-to-br from-navy-950 via-navy-900 to-emerald-950 text-white rounded-3xl p-5 shadow-2xl border border-turf-400/40 relative overflow-hidden">
@@ -705,6 +757,27 @@
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    function setupDynamicPwaAssets() {
+      try {
+        const manifestObj = {
+          name: 'Diamond Log | 少年野球成績',
+          short_name: 'Diamond Log',
+          start_url: window.location.href,
+          display: 'standalone',
+          background_color: '#0f172a',
+          theme_color: '#0f172a',
+          icons: [
+            { src: 'icon.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+        const manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = URL.createObjectURL(manifestBlob);
+        document.head.appendChild(manifestLink);
+      } catch (e) {}
+    }
+
     // ==================== マスター定義 ====================
     const DIRECTIONS = [
       { id: '左', label: 'レフト', angle: -34, dist: 0.84, zone: 'left' },
@@ -756,11 +829,92 @@
       { id: '指/控', label: 'DH・控え' }
     ];
 
-    // 配布版専用ストレージキー（初期試合データゼロ）
     const STORAGE_KEY = 'diamond_log_dist_v1';
+    const THEME_STORAGE_KEY = 'diamond_log_theme_v1';
 
     const DIAL_YEARS = [2024, 2025, 2026, 2027];
     const DIAL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    const THEME_PRESETS = [
+      {
+        id: 'green',
+        name: 'フィールドグリーン',
+        subLabel: '標準カラー',
+        main: '#0f172a',
+        mainSub: '#1e293b',
+        accent: '#10b981',
+        accentText: '#059669',
+        contrast: '#080d1a',
+        light: '#d1fae5',
+        border: 'rgba(52, 211, 153, 0.35)',
+        swatch: 'linear-gradient(135deg, #0f172a 50%, #10b981 50%)'
+      },
+      {
+        id: 'green-red',
+        name: 'グリーン × レッド',
+        subLabel: '緑＆赤 2色配色',
+        main: '#064e3b',
+        mainSub: '#065f46',
+        accent: '#dc2626',
+        accentText: '#dc2626',
+        contrast: '#ffffff',
+        light: '#fee2e2',
+        border: 'rgba(248, 113, 113, 0.45)',
+        swatch: 'linear-gradient(135deg, #064e3b 50%, #dc2626 50%)'
+      },
+      {
+        id: 'blue',
+        name: 'ロイヤルブルー',
+        subLabel: '青系チーム向け',
+        main: '#1e3a8a',
+        mainSub: '#1d4ed8',
+        accent: '#38bdf8',
+        accentText: '#0284c7',
+        contrast: '#082f49',
+        light: '#e0f2fe',
+        border: 'rgba(56, 189, 248, 0.45)',
+        swatch: 'linear-gradient(135deg, #1e3a8a 50%, #38bdf8 50%)'
+      },
+      {
+        id: 'red',
+        name: 'クリムゾンレッド',
+        subLabel: '赤系チーム向け',
+        main: '#7f1d1d',
+        mainSub: '#991b1b',
+        accent: '#fbbf24',
+        accentText: '#dc2626',
+        contrast: '#450a0a',
+        light: '#fef2f2',
+        border: 'rgba(251, 191, 36, 0.45)',
+        swatch: 'linear-gradient(135deg, #7f1d1d 50%, #ef4444 50%)'
+      },
+      {
+        id: 'navy-gold',
+        name: 'ネイビー × ゴールド',
+        subLabel: '強豪校風カラー',
+        main: '#0f172a',
+        mainSub: '#1e293b',
+        accent: '#f59e0b',
+        accentText: '#b45309',
+        contrast: '#0f172a',
+        light: '#fef3c7',
+        border: 'rgba(245, 158, 11, 0.45)',
+        swatch: 'linear-gradient(135deg, #0f172a 50%, #f59e0b 50%)'
+      },
+      {
+        id: 'sky-yellow',
+        name: 'スカイ × イエロー',
+        subLabel: '爽やか青空カラー',
+        main: '#0369a1',
+        mainSub: '#0284c7',
+        accent: '#facc15',
+        accentText: '#0369a1',
+        contrast: '#0c4a6e',
+        light: '#e0f2fe',
+        border: 'rgba(250, 204, 21, 0.5)',
+        swatch: 'linear-gradient(135deg, #0369a1 50%, #facc15 50%)'
+      }
+    ];
 
     function generateRandomRoomId() {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -771,13 +925,13 @@
       return `DL-${code}`;
     }
 
-    // ==================== アプリ状態（初期試合ゼロ） ====================
     let state = {
       roomId: '',
+      themeId: 'green',
       myTeams: JSON.parse(JSON.stringify(DEFAULT_MY_TEAMS)),
       playerName: '選手名',
       playerNumber: '1',
-      games: [], // 初期試合リストは完全に空
+      games: [],
       filterTeam: 'all',
       filterPeriodMode: 'all',
       filterStartYear: 2026,
@@ -802,8 +956,9 @@
     let unsubscribeRoom = null;
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'diamond-log-app';
 
-    // ==================== 初期化・同期 ====================
     async function initApp() {
+      setupDynamicPwaAssets();
+      initThemeSystem();
       loadFromLocalStorage();
 
       const hashRoom = window.location.hash.replace('#', '').trim().toUpperCase();
@@ -819,7 +974,6 @@
       setupEventListeners();
       renderAll();
 
-      // Firebase初期化（RULE 3: Auth完了後にFirestore操作）
       try {
         if (typeof __firebase_config !== 'undefined' && __firebase_config) {
           const firebaseConfig = JSON.parse(__firebase_config);
@@ -839,7 +993,6 @@
           setSyncStatus('connected', 'ローカル保存');
         }
       } catch (err) {
-        console.warn('Firebase fallback to local mode:', err);
         setSyncStatus('connected', 'ローカル保存');
       }
     }
@@ -895,8 +1048,7 @@
             setSyncStatus('connected', '同期完了');
           }
         }
-      }, (error) => {
-        console.error('Firestore snapshot error:', error);
+      }, () => {
         setSyncStatus('connected', 'ローカル保存');
       });
     }
@@ -919,7 +1071,6 @@
         }, { merge: true });
         setSyncStatus('connected', '同期完了');
       } catch (e) {
-        console.error('Firestore save error:', e);
         setSyncStatus('connected', 'ローカル保存');
       }
     }
@@ -935,7 +1086,59 @@
       }
     }
 
-    // ==================== iPhone風 期間ドラムロールダイヤル ====================
+    function initThemeSystem() {
+      let savedTheme = 'green';
+      try {
+        savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'green';
+      } catch (e) {}
+      renderThemePalette();
+      applyTheme(savedTheme, false);
+    }
+
+    function renderThemePalette() {
+      const grid = document.getElementById('theme-palette-grid');
+      if (!grid) return;
+      grid.innerHTML = THEME_PRESETS.map(t => `
+        <button type="button" onclick="applyTheme('${t.id}')" data-theme-id="${t.id}"
+          class="theme-card-btn flex flex-col items-center p-2.5 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-white active:scale-95 transition">
+          <span class="w-9 h-9 rounded-full shadow-md mb-1.5 border-2 border-white" style="background:${t.swatch}"></span>
+          <span class="text-[11px] font-black text-slate-800 leading-tight text-center">${t.name}</span>
+          <span class="text-[9px] font-bold text-slate-400 mt-0.5">${t.subLabel}</span>
+        </button>
+      `).join('');
+    }
+
+    window.applyTheme = function(themeId, notify = true) {
+      const theme = THEME_PRESETS.find(t => t.id === themeId) || THEME_PRESETS[0];
+      state.themeId = theme.id;
+      const root = document.documentElement;
+      root.style.setProperty('--theme-main', theme.main);
+      root.style.setProperty('--theme-main-sub', theme.mainSub);
+      root.style.setProperty('--theme-accent', theme.accent);
+      root.style.setProperty('--theme-accent-text', theme.accentText);
+      root.style.setProperty('--theme-accent-contrast', theme.contrast);
+      root.style.setProperty('--theme-light', theme.light);
+      root.style.setProperty('--theme-border', theme.border);
+
+      const badge = document.getElementById('current-theme-badge');
+      if (badge) badge.textContent = theme.name;
+
+      document.querySelectorAll('.theme-card-btn').forEach(btn => {
+        const isSelected = btn.dataset.themeId === theme.id;
+        btn.style.borderColor = isSelected ? theme.main : '#e2e8f0';
+        btn.style.backgroundColor = isSelected ? '#ffffff' : '#f8fafc';
+        btn.style.boxShadow = isSelected ? '0 4px 12px rgba(15, 23, 42, 0.12)' : 'none';
+      });
+
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, theme.id);
+      } catch (e) {}
+
+      if (notify) {
+        showToast(`テーマを「${theme.name}」に変更しました`);
+      }
+    };
+
     function initPeriodWheelDOM() {
       const yearWheel = document.getElementById('wheel-year');
       const monthWheel = document.getElementById('wheel-month');
@@ -1048,7 +1251,6 @@
       return `${state.filterStartYear}年${state.filterStartMonth}月〜`;
     }
 
-    // ==================== 共通フィルター＆描画 ====================
     window.syncTeamFilter = function(value) {
       state.filterTeam = value;
       renderAll();
@@ -1456,7 +1658,6 @@
       }
     }
 
-    // ==================== 試合入力・編集モーダル ====================
     function renderFormMyTeamSelector() {
       const container = document.getElementById('form-myteam-selector');
       container.innerHTML = state.myTeams.map(t => {
@@ -1691,7 +1892,6 @@
       renderFormSteppers();
     };
 
-    // ==================== 2タップ＆ミニグラウンド打席ピッカー ====================
     window.openAtBatPicker = function(idx) {
       state.editingAtBatIndex = idx;
       const num = idx === -1 ? state.editingAtBats.length + 1 : idx + 1;
@@ -1817,7 +2017,6 @@
       `).join('');
     }
 
-    // ==================== 保存・削除・所属チーム管理 ====================
     window.saveGameForm = async function() {
       const date = document.getElementById('form-date').value;
       const opponent = document.getElementById('form-opponent').value.trim();
@@ -1978,7 +2177,7 @@
       updateRoomIdUI();
       saveToLocalStorage();
       subscribeToRoom(state.roomId);
-      showToast(`ルーム「${state.roomId}」に接続しました！`);
+      showToast(`ルーム「${state.roomId}」に変更・接続しました！`);
     };
 
     window.openShareCardModal = function() {
@@ -2053,7 +2252,6 @@
       event.target.value = '';
     };
 
-    // ==================== ナビゲーション・イベント ====================
     window.switchTab = function(tabName) {
       ['games', 'stats', 'spray', 'settings'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.add('hidden');
