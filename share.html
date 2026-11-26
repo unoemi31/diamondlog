@@ -1,0 +1,2088 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Diamond Log | 少年野球 打撃成績＆リアルタイム共有</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans JP', 'sans-serif'],
+            display: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            navy: {
+              950: '#080d1a',
+              900: '#0f172a',
+              800: '#1e293b',
+              700: '#334155',
+            },
+            turf: {
+              600: '#059669',
+              500: '#10b981',
+              400: '#34d399',
+              100: '#d1fae5',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      overscroll-behavior-y: none;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .pb-safe-main {
+      padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 96px);
+    }
+    .nav-safe-bottom {
+      padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 12px);
+    }
+    /* iOS風ドラムロールダイヤル */
+    .wheel-column {
+      scroll-snap-type: y mandatory;
+      overflow-y: scroll;
+      -webkit-overflow-scrolling: touch;
+    }
+    .wheel-item {
+      scroll-snap-align: center;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, color 0.15s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+  </style>
+</head>
+<body class="antialiased select-none">
+
+  <!-- メインアプリコンテナ -->
+  <div id="app" class="max-w-lg mx-auto min-h-screen bg-slate-100 relative shadow-2xl flex flex-col">
+
+    <!-- トップヘッダー -->
+    <header class="sticky top-0 z-30 bg-navy-900 text-white px-3.5 py-3 shadow-lg border-b border-white/10">
+      <div class="flex items-center justify-between gap-2">
+        <!-- 左：アプリタイトル＆選手・所属チーム概要 -->
+        <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-turf-400 to-turf-600 flex items-center justify-center shadow-inner shrink-0">
+            <svg class="w-5 h-5 text-navy-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M7.5 4.8C9.2 7.2 9.2 16.8 7.5 19.2" stroke-dasharray="2 2"/>
+              <path d="M16.5 4.8C14.8 7.2 14.8 16.8 16.5 19.2" stroke-dasharray="2 2"/>
+            </svg>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-[9px] font-black tracking-widest uppercase text-turf-400 leading-none">DIAMOND LOG</span>
+            </div>
+            <div class="flex items-center space-x-1.5 mt-0.5">
+              <h1 id="header-player-name" class="text-sm sm:text-base font-black tracking-tight leading-none truncate">選手名</h1>
+              <span id="header-player-number" class="text-[10px] font-extrabold bg-white/15 text-turf-400 px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap">#1</span>
+            </div>
+            <p id="header-team-summary" class="text-[10px] text-slate-300 truncate mt-0.5">NGS / 選抜</p>
+          </div>
+        </div>
+
+        <!-- 右：同期バッジ & ＋試合追加ボタン -->
+        <div class="flex items-center space-x-1.5 shrink-0">
+          <button type="button" onclick="switchTab('settings')" id="sync-badge" class="flex items-center space-x-1.5 bg-navy-800 hover:bg-navy-700 border border-white/15 px-2.5 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap shrink-0 transition">
+            <span id="sync-dot" class="w-2 h-2 rounded-full bg-turf-400 shrink-0"></span>
+            <span id="sync-label" class="text-slate-100 whitespace-nowrap">同期完了</span>
+          </button>
+          <button type="button" onclick="openGameModal()" class="bg-turf-500 hover:bg-turf-400 active:scale-95 text-navy-950 font-black text-xs px-3 py-2 rounded-xl shadow-md shadow-turf-500/25 flex items-center space-x-1 whitespace-nowrap shrink-0 transition">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span class="whitespace-nowrap">試合追加</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- メインコンテンツ領域 -->
+    <main class="flex-1 pb-safe-main overflow-y-auto">
+
+      <!-- ==================== 1. 試合一覧タブ ==================== -->
+      <section id="tab-games" class="p-4 space-y-3.5 animate-fade-in">
+        <!-- 集計範囲フィルター -->
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] font-extrabold text-slate-500 flex items-center gap-1 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5 text-turf-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+              集計範囲フィルター
+            </span>
+            <span id="games-count-badge" class="text-xs font-black text-navy-900 bg-slate-100 px-2.5 py-0.5 rounded-full whitespace-nowrap">0試合表示</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <select id="filter-games-team" onchange="syncTeamFilter(this.value)" class="w-full bg-slate-100 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-turf-500">
+              <option value="all">所属: すべて（合計）</option>
+            </select>
+            <button type="button" onclick="openPeriodDialModal()" class="w-full bg-slate-100 hover:bg-slate-200/80 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 flex items-center justify-between gap-1 transition">
+              <span id="filter-games-period-label" class="truncate">期間: 全期間</span>
+              <svg class="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 試合カードリスト -->
+        <div id="games-list-container" class="space-y-3"></div>
+      </section>
+
+      <!-- ==================== 2. 打撃成績タブ ==================== -->
+      <section id="tab-stats" class="p-4 space-y-4 hidden animate-fade-in">
+        <!-- 集計範囲フィルター＆シェア -->
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] font-extrabold text-slate-500 flex items-center gap-1 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5 text-turf-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+              集計範囲フィルター
+            </span>
+            <button type="button" onclick="openShareCardModal()" class="bg-gradient-to-r from-amber-300 to-amber-400 hover:from-amber-400 hover:to-amber-500 text-navy-950 font-black text-[11px] px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1 whitespace-nowrap shrink-0 active:scale-95 transition">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span>成績カード表示</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <select id="filter-stats-team" onchange="syncTeamFilter(this.value)" class="w-full bg-slate-100 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-turf-500">
+              <option value="all">所属: すべて（合計）</option>
+            </select>
+            <button type="button" onclick="openPeriodDialModal()" class="w-full bg-slate-100 hover:bg-slate-200/80 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 flex items-center justify-between gap-1 transition">
+              <span id="filter-stats-period-label" class="truncate">期間: 全期間</span>
+              <svg class="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 試合成績サマリーバー -->
+        <div class="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-4 text-white shadow-md flex items-center justify-between border border-white/10">
+          <div>
+            <p class="text-[10px] font-extrabold text-turf-400 uppercase tracking-wider">TEAM RECORD / 試合成績</p>
+            <p id="stats-team-record" class="text-lg font-black mt-0.5">0勝 0敗 0分</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[10px] font-bold text-slate-400">勝率</p>
+            <p id="stats-win-rate" class="text-2xl font-black text-turf-400 font-display">.000</p>
+          </div>
+        </div>
+
+        <!-- 主要4指標カード -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 relative overflow-hidden">
+            <div class="absolute right-0 top-0 w-16 h-16 bg-turf-500/10 rounded-bl-full"></div>
+            <span class="text-xs font-bold text-slate-500">打率 <span class="text-[10px] text-slate-400 font-normal">AVG</span></span>
+            <div id="stat-avg" class="text-3xl font-black text-navy-900 font-display mt-1 tracking-tight">.000</div>
+            <p id="stat-hits-ab" class="text-[11px] font-bold text-turf-600 mt-1">0安打 / 0打数</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 relative overflow-hidden">
+            <div class="absolute right-0 top-0 w-16 h-16 bg-blue-500/10 rounded-bl-full"></div>
+            <span class="text-xs font-bold text-slate-500">OPS <span class="text-[10px] text-slate-400 font-normal">出塁+長打</span></span>
+            <div id="stat-ops" class="text-3xl font-black text-navy-900 font-display mt-1 tracking-tight">.000</div>
+            <p id="stat-ops-rank" class="text-[11px] font-bold text-blue-600 mt-1">強打者指標</p>
+          </div>
+          <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80">
+            <span class="text-xs font-bold text-slate-500">出塁率 <span class="text-[10px] text-slate-400 font-normal">OBP</span></span>
+            <div id="stat-obp" class="text-2xl font-black text-slate-800 font-display mt-0.5">.000</div>
+          </div>
+          <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80">
+            <span class="text-xs font-bold text-slate-500">長打率 <span class="text-[10px] text-slate-400 font-normal">SLG</span></span>
+            <div id="stat-slg" class="text-2xl font-black text-slate-800 font-display mt-0.5">.000</div>
+          </div>
+        </div>
+
+        <!-- 詳細成績18項目グリッド -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80">
+          <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3">BATTING DETAILS / 詳細成績一覧</h3>
+          <div class="grid grid-cols-3 gap-2.5" id="detailed-stats-grid"></div>
+        </div>
+      </section>
+
+      <!-- ==================== 3. 打球分析タブ ==================== -->
+      <section id="tab-spray" class="p-4 space-y-4 hidden animate-fade-in">
+        <!-- 集計範囲フィルター -->
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
+          <div class="grid grid-cols-2 gap-2">
+            <select id="filter-spray-team" onchange="syncTeamFilter(this.value)" class="w-full bg-slate-100 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-turf-500">
+              <option value="all">所属: すべて（合計）</option>
+            </select>
+            <button type="button" onclick="openPeriodDialModal()" class="w-full bg-slate-100 hover:bg-slate-200/80 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 flex items-center justify-between gap-1 transition">
+              <span id="filter-spray-period-label" class="truncate">期間: 全期間</span>
+              <svg class="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+            </button>
+          </div>
+          <!-- 結果種別フィルター -->
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1" id="spray-type-filters">
+            <button type="button" data-stype="all" class="stype-btn active px-3 py-1.5 rounded-xl text-xs font-extrabold bg-navy-900 text-white whitespace-nowrap transition">すべて表示</button>
+            <button type="button" data-stype="hits" class="stype-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 whitespace-nowrap transition">安打のみ</button>
+            <button type="button" data-stype="xbh" class="stype-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 whitespace-nowrap transition">長打・本塁打のみ</button>
+            <button type="button" data-stype="outs" class="stype-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 whitespace-nowrap transition">凡退のみ</button>
+          </div>
+        </div>
+
+        <!-- スプレーチャートカード -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-black text-navy-900">打球方向スプレーチャート</h2>
+            <span id="spray-tendency-badge" class="text-[11px] font-extrabold bg-turf-100 text-turf-600 px-2.5 py-1 rounded-full whitespace-nowrap">打球記録待ち</span>
+          </div>
+
+          <!-- 凡例 -->
+          <div class="flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold bg-slate-50 py-2 px-3 rounded-xl border border-slate-200/70 mb-3">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded-full bg-rose-500 inline-block"></span>本塁打</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded-full bg-orange-500 inline-block"></span>二・三塁打</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded-full bg-blue-500 inline-block"></span>単打</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded-full bg-slate-400 inline-block"></span>凡退</span>
+          </div>
+
+          <!-- 野球場SVG -->
+          <div class="relative w-full aspect-[1/0.94] bg-emerald-950 rounded-2xl overflow-hidden shadow-inner border-2 border-emerald-800">
+            <svg id="spray-chart-svg" viewBox="0 0 360 340" class="w-full h-full">
+              <defs>
+                <radialGradient id="turfGradMain" cx="50%" cy="88%" r="85%">
+                  <stop offset="0%" stop-color="#10b981" />
+                  <stop offset="65%" stop-color="#059669" />
+                  <stop offset="100%" stop-color="#064e3b" />
+                </radialGradient>
+              </defs>
+              <rect width="360" height="340" fill="#022c22" />
+              <!-- 外野芝生 -->
+              <path d="M 180 310 L 25 155 A 220 220 0 0 1 335 155 Z" fill="url(#turfGradMain)" />
+              <!-- 外野フェンス -->
+              <path d="M 25 155 A 220 220 0 0 1 335 155" fill="none" stroke="#facc15" stroke-width="3.5" stroke-linecap="round"/>
+              <!-- 内野の土 -->
+              <path d="M 180 310 L 102 232 A 110 110 0 0 1 258 232 Z" fill="#d9a066" />
+              <!-- 内野芝生 -->
+              <polygon points="180,295 128,243 180,191 232,243" fill="#059669" />
+              <!-- マウンド -->
+              <circle cx="180" cy="245" r="10" fill="#d9a066" />
+              <rect x="176" y="244" width="8" height="2.5" fill="#ffffff" />
+              <!-- ファウルライン -->
+              <line x1="180" y1="310" x2="25" y2="155" stroke="#ffffff" stroke-width="2" opacity="0.9"/>
+              <line x1="180" y1="310" x2="335" y2="155" stroke="#ffffff" stroke-width="2" opacity="0.9"/>
+              <!-- ベース -->
+              <polygon points="180,313 176,309 176,305 184,305 184,309" fill="#ffffff" />
+              <rect x="229" y="240" width="7" height="7" transform="rotate(45 232.5 243.5)" fill="#ffffff" />
+              <rect x="176.5" y="187.5" width="7" height="7" transform="rotate(45 180 191)" fill="#ffffff" />
+              <rect x="124" y="240" width="7" height="7" transform="rotate(45 127.5 243.5)" fill="#ffffff" />
+              <text x="180" y="70" text-anchor="middle" fill="#ffffff" opacity="0.45" font-size="10" font-weight="bold">CENTER</text>
+              <text x="72" y="125" text-anchor="middle" fill="#ffffff" opacity="0.45" font-size="10" font-weight="bold">LEFT</text>
+              <text x="288" y="125" text-anchor="middle" fill="#ffffff" opacity="0.45" font-size="10" font-weight="bold">RIGHT</text>
+              <!-- 打球軌跡レイヤー -->
+              <g id="spray-lines-layer"></g>
+            </svg>
+          </div>
+
+          <!-- 方向別打球割合バー -->
+          <div class="mt-4 space-y-2">
+            <div class="flex justify-between text-xs font-extrabold text-slate-600">
+              <span>レフト方向 <span id="spray-left-pct" class="text-navy-900">0%</span></span>
+              <span>センター方向 <span id="spray-center-pct" class="text-navy-900">0%</span></span>
+              <span>ライト方向 <span id="spray-right-pct" class="text-navy-900">0%</span></span>
+            </div>
+            <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden flex">
+              <div id="spray-bar-left" class="bg-turf-500 h-full transition-all duration-500" style="width: 33.3%"></div>
+              <div id="spray-bar-center" class="bg-blue-500 h-full transition-all duration-500" style="width: 33.3%"></div>
+              <div id="spray-bar-right" class="bg-amber-500 h-full transition-all duration-500" style="width: 33.4%"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 4. 共有・設定タブ ==================== -->
+      <section id="tab-settings" class="p-4 space-y-4 hidden animate-fade-in">
+        <!-- リアルタイムデータ共有カード -->
+        <div class="bg-gradient-to-br from-navy-900 to-navy-800 rounded-2xl p-4 text-white shadow-md border border-white/10 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-turf-400"></span>
+              <h2 class="text-sm font-black">家族・メンバー間のリアルタイム共有</h2>
+            </div>
+            <span id="settings-sync-status" class="text-[10px] font-extrabold bg-white/10 text-turf-400 px-2.5 py-0.5 rounded-full">同期完了</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            下の<strong>「共有URLをコピー」</strong>からリンクを家族に送るか、<strong>「共有ルームID」</strong>をもう一方のiPhoneで入力して接続すると、試合記録がリアルタイムで自動同期されます。
+          </p>
+          <div class="bg-navy-950/60 border border-white/15 rounded-xl p-3 space-y-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <span class="text-[10px] font-bold text-slate-400 block">現在の共有ルームID</span>
+                <span id="current-room-id-display" class="text-base font-black tracking-wider text-turf-400 font-display">DL-XXXXXX</span>
+              </div>
+              <button type="button" onclick="copyShareUrl()" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-3.5 py-2 rounded-xl whitespace-nowrap active:scale-95 transition">
+                共有URLをコピー
+              </button>
+            </div>
+          </div>
+          <div class="pt-1 flex gap-2">
+            <input type="text" id="join-room-input" placeholder="別のルームIDを入力して接続" class="flex-1 bg-white/10 border border-white/15 rounded-xl px-3 py-2.5 text-xs font-bold text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-turf-400 uppercase" />
+            <button type="button" onclick="joinRoom()" class="bg-white text-navy-900 hover:bg-slate-100 font-black text-xs px-4 py-2.5 rounded-xl whitespace-nowrap active:scale-95 transition">
+              接続する
+            </button>
+          </div>
+        </div>
+
+        <!-- 選手プロフィール設定 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+          <h3 class="text-sm font-black text-navy-900">選手プロフィール設定</h3>
+          <div class="grid grid-cols-3 gap-2.5">
+            <div class="col-span-2">
+              <label class="text-xs font-bold text-slate-500 block mb-1">選手名（お子様のお名前）</label>
+              <input type="text" id="setting-player-name" placeholder="例: ゆうた" class="w-full bg-slate-100 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-turf-500" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-500 block mb-1">背番号</label>
+              <input type="text" id="setting-player-number" placeholder="1" class="w-full bg-slate-100 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-800 text-center outline-none focus:ring-2 focus:ring-turf-500" />
+            </div>
+          </div>
+          <button type="button" onclick="saveProfileSettings()" class="w-full bg-navy-900 hover:bg-navy-800 text-white font-extrabold text-xs py-3 rounded-xl shadow active:scale-98 transition">
+            プロフィールを保存
+          </button>
+        </div>
+
+        <!-- 複数所属チームの管理（略称4文字まで＆正式名称） -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-navy-900">所属チーム管理（略称4文字まで）</h3>
+            <span class="text-[10px] font-bold text-slate-400">バッジ表記・フィルター連動</span>
+          </div>
+          <div id="settings-myteams-list" class="space-y-2.5"></div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+            <span class="text-[11px] font-extrabold text-slate-600 block">新しい所属チームを追加</span>
+            <div class="grid grid-cols-3 gap-2">
+              <input type="text" id="new-myteam-short" maxlength="4" placeholder="略称(4文字迄)" class="col-span-1 bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-black text-navy-900 outline-none focus:ring-2 focus:ring-turf-500" />
+              <input type="text" id="new-myteam-name" placeholder="正式チーム名を入力" class="col-span-2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-turf-500" />
+            </div>
+            <button type="button" onclick="addMyTeam()" class="w-full bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs py-2.5 rounded-xl active:scale-95 transition">
+              ＋ 所属チームを追加する
+            </button>
+          </div>
+        </div>
+
+        <!-- データ管理（JSON書き出し＆読み込み） -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+          <h3 class="text-sm font-black text-navy-900">データバックアップ（JSON書き出し・読み込み）</h3>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button type="button" onclick="exportDataJson()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-3 px-3 rounded-xl flex items-center justify-center gap-1.5 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              JSON書き出し
+            </button>
+            <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-3 px-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              JSON読み込み
+              <input type="file" accept=".json,application/json" onchange="importDataJson(event)" class="hidden" />
+            </label>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ボトムナビゲーション -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 nav-safe-bottom shadow-[0_-6px_24px_rgba(15,23,42,0.08)]">
+      <div class="grid grid-cols-4 pt-2 pb-1">
+        <button type="button" onclick="switchTab('games')" id="nav-games" class="nav-btn active flex flex-col items-center justify-center space-y-1 text-navy-900">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span class="text-[11px] font-black">試合一覧</span>
+        </button>
+        <button type="button" onclick="switchTab('stats')" id="nav-stats" class="nav-btn flex flex-col items-center justify-center space-y-1 text-slate-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span class="text-[11px] font-bold">打撃成績</span>
+        </button>
+        <button type="button" onclick="switchTab('spray')" id="nav-spray" class="nav-btn flex flex-col items-center justify-center space-y-1 text-slate-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 12l10 10 10-10L12 2zm0 6v8m-4-4h8"/></svg>
+          <span class="text-[11px] font-bold">打球分析</span>
+        </button>
+        <button type="button" onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center justify-center space-y-1 text-slate-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span class="text-[11px] font-bold">共有・設定</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ==================== iPhone風 期間ドラムロールダイヤルモーダル ==================== -->
+  <div id="period-dial-modal" class="fixed inset-0 z-[55] bg-slate-950/75 backdrop-blur-sm hidden flex flex-col justify-end sm:justify-center">
+    <div class="bg-white w-full max-w-lg mx-auto rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl animate-fade-in">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <button type="button" onclick="closePeriodDialModal()" class="text-xs font-bold text-slate-400 px-2 py-1">閉じる</button>
+        <h3 class="text-sm font-black text-navy-900">集計期間の選択</h3>
+        <button type="button" onclick="applyPeriodDialSelection()" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-4 py-1.5 rounded-xl">適用する</button>
+      </div>
+
+      <!-- クイックプリセット -->
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" id="preset-all-btn" onclick="selectPeriodPreset('all')" class="py-2.5 px-2 rounded-xl text-xs font-black border transition">
+          全期間
+        </button>
+        <button type="button" id="preset-202611-btn" onclick="selectPeriodPreset('2026-11')" class="py-2.5 px-2 rounded-xl text-xs font-black border transition">
+          2026年11月〜
+        </button>
+        <button type="button" id="preset-202511-btn" onclick="selectPeriodPreset('2025-11')" class="py-2.5 px-2 rounded-xl text-xs font-black border transition">
+          2025年11月〜
+        </button>
+      </div>
+
+      <!-- 2連ドラムロールダイヤル（開始年・開始月） -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between px-1">
+          <span class="text-xs font-extrabold text-slate-500">開始年月をダイヤルで指定</span>
+          <span id="dial-preview-text" class="text-xs font-black text-turf-600 bg-turf-100 px-2.5 py-0.5 rounded-full">全期間</span>
+        </div>
+
+        <div class="relative h-[200px] bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden grid grid-cols-2">
+          <!-- 中央選択ハイライトバー -->
+          <div class="pointer-events-none absolute inset-x-3 top-1/2 -translate-y-1/2 h-[40px] bg-navy-900/10 border-y-2 border-turf-500 rounded-xl z-10"></div>
+
+          <!-- 左ドラム：開始年 -->
+          <div id="wheel-year" onscroll="handleWheelScroll('year')" class="wheel-column no-scrollbar py-[80px] text-center z-20"></div>
+
+          <!-- 右ドラム：開始月 -->
+          <div id="wheel-month" onscroll="handleWheelScroll('month')" class="wheel-column no-scrollbar py-[80px] text-center z-20 border-l border-slate-200/70"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 試合・打席入力モーダル ==================== -->
+  <div id="game-modal" class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm hidden flex flex-col justify-end sm:justify-center">
+    <div class="bg-slate-100 w-full max-w-lg mx-auto h-[94vh] sm:h-[90vh] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl">
+      <!-- モーダルヘッダー -->
+      <div class="bg-navy-900 text-white px-4 py-3.5 flex items-center justify-between shrink-0">
+        <button type="button" onclick="closeGameModal()" class="text-slate-300 hover:text-white text-xs font-extrabold px-2.5 py-1.5 rounded-lg">キャンセル</button>
+        <h2 id="game-modal-title" class="text-sm font-black">試合結果・打席入力</h2>
+        <button type="button" onclick="saveGameForm()" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-4 py-2 rounded-xl shadow active:scale-95 transition">
+          保存する
+        </button>
+      </div>
+
+      <!-- フォーム本体 -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-12">
+        <input type="hidden" id="edit-game-id" value="" />
+
+        <!-- 出場チーム選択カード（複数所属対応） -->
+        <div class="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-3.5 text-white shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-black text-turf-400">出場チーム（どのチームでの試合？）</label>
+            <span class="text-[10px] text-slate-300">必須選択</span>
+          </div>
+          <div id="form-myteam-selector" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+        </div>
+
+        <!-- 基本試合情報カード -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3.5">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-bold text-slate-500 block mb-1">試合日</label>
+              <input type="date" id="form-date" class="w-full bg-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-turf-500" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-500 block mb-1">先攻 / 後攻</label>
+              <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl">
+                <button type="button" id="btn-order-first" onclick="setOrderType('先攻')" class="py-1.5 rounded-lg text-xs font-black bg-white text-navy-900 shadow-sm">先攻</button>
+                <button type="button" id="btn-order-second" onclick="setOrderType('後攻')" class="py-1.5 rounded-lg text-xs font-bold text-slate-500">後攻</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-500 block mb-1">相手チーム</label>
+            <input type="text" id="form-opponent" placeholder="対戦相手チーム名を入力" class="w-full bg-slate-100 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-turf-500" />
+            <div id="opponent-history-chips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar mt-2"></div>
+          </div>
+
+          <!-- スコア＆勝敗自動判定プレビュー -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-bold text-slate-500">スコア（自チーム vs 相手）</label>
+              <span id="form-result-preview" class="text-[11px] font-black px-2 py-0.5 rounded bg-slate-200 text-slate-700">DRAW（引き分け）</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="stepScore('my', -1)" class="w-9 h-9 rounded-xl bg-white border border-slate-300 font-black text-lg text-slate-700 active:bg-slate-200">-</button>
+                <input type="number" id="form-my-score" oninput="updateScoreResultPreview()" value="0" min="0" class="w-12 text-center text-2xl font-black text-navy-900 bg-transparent outline-none" />
+                <button type="button" onclick="stepScore('my', 1)" class="w-9 h-9 rounded-xl bg-navy-900 text-white font-black text-lg active:bg-navy-700">+</button>
+              </div>
+              <span class="text-sm font-black text-slate-400">対</span>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="stepScore('opp', -1)" class="w-9 h-9 rounded-xl bg-white border border-slate-300 font-black text-lg text-slate-700 active:bg-slate-200">-</button>
+                <input type="number" id="form-opp-score" oninput="updateScoreResultPreview()" value="0" min="0" class="w-12 text-center text-2xl font-black text-slate-700 bg-transparent outline-none" />
+                <button type="button" onclick="stepScore('opp', 1)" class="w-9 h-9 rounded-xl bg-slate-700 text-white font-black text-lg active:bg-slate-600">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <label class="text-xs font-bold text-slate-500 block mb-1">打順</label>
+              <select id="form-batting-order" class="w-full bg-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-turf-500">
+                <option value="">未設定</option>
+                <option value="1番">1番</option>
+                <option value="2番">2番</option>
+                <option value="3番">3番</option>
+                <option value="4番">4番</option>
+                <option value="5番">5番</option>
+                <option value="6番">6番</option>
+                <option value="7番">7番</option>
+                <option value="8番">8番</option>
+                <option value="9番">9番</option>
+                <option value="代打">代打・途中</option>
+              </select>
+            </div>
+
+            <!-- 複数ポジション（守備位置変更）の順番記録エリア -->
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-black text-navy-900">守備位置（試合中の交代順に追加）</label>
+                <button type="button" onclick="clearFormPositions()" class="text-[11px] font-bold text-slate-400 hover:text-rose-500 transition">リセット</button>
+              </div>
+              <div id="form-positions-chain" class="min-h-[38px] bg-white rounded-xl p-2 border border-slate-200 flex flex-wrap items-center gap-1.5"></div>
+              <div id="form-position-buttons" class="grid grid-cols-5 gap-1.5"></div>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-500 block mb-1">試合場所・グラウンド</label>
+            <input type="text" id="form-location" placeholder="例: 市民球場・小学校グラウンド" class="w-full bg-slate-100 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-turf-500" />
+            <div id="location-history-chips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar mt-2"></div>
+          </div>
+        </div>
+
+        <!-- 打席結果カード -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-navy-900">打撃成績（第1打席〜）</h3>
+            <button type="button" onclick="openAtBatPicker(-1)" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-3 py-1.5 rounded-xl flex items-center gap-1 active:scale-95 transition">
+              <span>＋ 打席追加</span>
+            </button>
+          </div>
+          <div id="form-atbats-list" class="space-y-2"></div>
+        </div>
+
+        <!-- 打点・得点・盗塁・失策＆メモ -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3.5">
+          <h3 class="text-sm font-black text-navy-900">個人記録・試合メモ</h3>
+          <div class="grid grid-cols-2 gap-2.5" id="form-steppers-container"></div>
+          <div>
+            <label class="text-xs font-bold text-slate-500 block mb-1">試合メモ・振り返り</label>
+            <textarea id="form-memo" rows="2" placeholder="ナイスバッティングや気づいた点を記録" class="w-full bg-slate-100 rounded-xl p-3 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-turf-500"></textarea>
+          </div>
+        </div>
+
+        <!-- 削除ボタン（編集時のみ表示） -->
+        <div id="delete-game-container" class="hidden pt-2">
+          <button type="button" onclick="deleteCurrentGame()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-extrabold text-xs py-3 rounded-xl border border-rose-200 transition">
+            この試合データを削除する
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 2タップ＆グラウンド位置調整 打席ピッカーモーダル ==================== -->
+  <div id="atbat-picker-modal" class="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm hidden flex flex-col justify-end sm:justify-center">
+    <div class="bg-white w-full max-w-lg mx-auto rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="bg-navy-900 text-white px-4 py-3 flex items-center justify-between shrink-0">
+        <button type="button" onclick="closeAtBatPicker()" class="text-slate-300 text-xs font-bold px-2 py-1">閉じる</button>
+        <h3 id="atbat-picker-title" class="text-sm font-black">第1打席の方向と結果</h3>
+        <span class="text-[11px] font-extrabold text-turf-400">2タップ入力</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 space-y-4">
+        <!-- STEP 1: 打球方向選択＆ミニグラウンド微調整 -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-navy-900">① 打球方向を選択（または下の図をタップ）</span>
+            <span id="picker-coord-status" class="text-[10px] font-bold text-turf-600 bg-turf-100 px-2 py-0.5 rounded-full">方向連動中</span>
+          </div>
+          <div id="picker-directions" class="grid grid-cols-4 gap-1.5"></div>
+
+          <!-- 打球位置微調整ミニグラウンド -->
+          <div class="bg-emerald-950 rounded-2xl p-2 border border-emerald-800 flex items-center gap-3">
+            <svg id="mini-field-svg" onclick="handleMiniFieldTap(event)" viewBox="0 0 200 180" class="w-36 h-32 shrink-0 rounded-xl bg-emerald-900 cursor-crosshair">
+              <path d="M 100 165 L 15 80 A 120 120 0 0 1 185 80 Z" fill="#059669" />
+              <path d="M 15 80 A 120 120 0 0 1 185 80" fill="none" stroke="#facc15" stroke-width="2" />
+              <path d="M 100 165 L 55 120 A 64 64 0 0 1 145 120 Z" fill="#d9a066" />
+              <polygon points="100,156 72,128 100,100 128,128" fill="#059669" />
+              <line x1="100" y1="165" x2="15" y2="80" stroke="#fff" stroke-width="1.2" opacity="0.8"/>
+              <line x1="100" y1="165" x2="185" y2="80" stroke="#fff" stroke-width="1.2" opacity="0.8"/>
+              <line id="mini-spray-line" x1="100" y1="164" x2="60" y2="65" stroke="#facc15" stroke-width="2.5" stroke-linecap="round"/>
+              <circle id="mini-spray-dot" cx="60" cy="65" r="5" fill="#ef4444" stroke="#fff" stroke-width="1.5"/>
+            </svg>
+            <div class="text-white space-y-1">
+              <p class="text-xs font-black text-turf-400">グラウンド直接タップ微調整</p>
+              <p class="text-[11px] text-slate-300 leading-snug">左のグラウンド図の打球が飛んだ位置を直接タップすると、スプレーチャートの飛距離・角度を細かく調整できます。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: 打席結果タップ（即決定） -->
+        <div class="space-y-2 pb-4">
+          <span class="text-xs font-black text-navy-900 block">② 打席結果をタップして確定</span>
+          <div id="picker-outcomes" class="grid grid-cols-3 gap-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 画像風成績シェアカードモーダル ==================== -->
+  <div id="share-card-modal" class="fixed inset-0 z-[65] bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm space-y-3 animate-fade-in">
+      <div class="bg-gradient-to-br from-navy-950 via-navy-900 to-emerald-950 text-white rounded-3xl p-5 shadow-2xl border border-turf-400/40 relative overflow-hidden">
+        <div class="absolute -right-8 -top-8 w-36 h-36 bg-turf-500/20 rounded-full blur-2xl"></div>
+        <div class="flex items-start justify-between border-b border-white/15 pb-3 mb-3.5 gap-2">
+          <div class="min-w-0">
+            <span id="card-team-label" class="inline-block text-[10px] font-black bg-turf-500/20 text-turf-400 border border-turf-400/30 px-2.5 py-0.5 rounded-full truncate max-w-full">すべてのチーム（合計）</span>
+            <h3 id="card-player-title" class="text-xl font-black mt-1.5 tracking-tight">選手名 #1</h3>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="text-[9px] font-black tracking-widest text-turf-400 block">DIAMOND LOG</span>
+            <span id="card-period-label" class="text-xs font-bold text-slate-200">全期間</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3.5">
+          <div class="bg-white/10 rounded-2xl p-3 text-center border border-white/10">
+            <span class="text-[10px] font-extrabold text-turf-400 block">打率 AVG</span>
+            <span id="card-avg" class="text-3xl font-black font-display">.000</span>
+            <span id="card-hits-ab" class="text-[10px] text-slate-300 block mt-0.5">0安打 / 0打数</span>
+          </div>
+          <div class="bg-white/10 rounded-2xl p-3 text-center border border-white/10">
+            <span class="text-[10px] font-extrabold text-amber-300 block">OPS</span>
+            <span id="card-ops" class="text-3xl font-black font-display">.000</span>
+            <span id="card-obp-slg" class="text-[10px] text-slate-300 block mt-0.5">出塁.000 / 長打.000</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-2 text-center bg-black/30 rounded-2xl p-3 text-xs border border-white/5">
+          <div><span class="text-[10px] text-slate-400 block">二塁打</span><strong id="card-2b" class="font-display text-sm">0</strong></div>
+          <div><span class="text-[10px] text-slate-400 block">三塁打</span><strong id="card-3b" class="font-display text-sm">0</strong></div>
+          <div><span class="text-[10px] text-slate-400 block">本塁打</span><strong id="card-hr" class="font-display text-sm text-amber-400">0</strong></div>
+          <div><span class="text-[10px] text-slate-400 block">打点</span><strong id="card-rbi" class="font-display text-sm text-turf-400">0</strong></div>
+          <div><span class="text-[10px] text-slate-400 block">四死球</span><strong id="card-bb" class="font-display text-sm">0</strong></div>
+          <div><span class="text-[10px] text-slate-400 block">盗塁</span><strong id="card-sb" class="font-display text-sm">0</strong></div>
+          <div><span class="text-[10px] text-slate-400 block">出塁率</span><strong id="card-obp" class="font-display text-sm">.000</strong></div>
+          <div><span class="text-[10px] text-slate-400 block">長打率</span><strong id="card-slg" class="font-display text-sm">.000</strong></div>
+        </div>
+        <p class="text-[10px] text-center text-slate-400 mt-3">スクリーンショットで家族・LINEへそのまま共有できます</p>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="button" onclick="shareStatsText()" class="flex-1 bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs py-3 rounded-xl shadow active:scale-95 transition">成績テキストをコピー</button>
+        <button type="button" onclick="closeShareCardModal()" class="bg-white text-slate-700 font-extrabold text-xs px-5 py-3 rounded-xl shadow">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-[75] bg-navy-900 text-white text-xs font-extrabold px-4 py-2.5 rounded-full shadow-2xl border border-turf-400/30 opacity-0 pointer-events-none transition-opacity duration-200 whitespace-nowrap">
+    通知メッセージ
+  </div>
+
+  <!-- Firebase & アプリロジック -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ==================== マスター定義 ====================
+    const DIRECTIONS = [
+      { id: '左', label: 'レフト', angle: -34, dist: 0.84, zone: 'left' },
+      { id: '左中', label: '左中間', angle: -17, dist: 0.91, zone: 'left' },
+      { id: '中', label: 'センター', angle: 0, dist: 0.89, zone: 'center' },
+      { id: '右中', label: '右中間', angle: 17, dist: 0.91, zone: 'right' },
+      { id: '右', label: 'ライト', angle: 34, dist: 0.84, zone: 'right' },
+      { id: '三', label: 'サード', angle: -32, dist: 0.44, zone: 'left' },
+      { id: '遊', label: 'ショート', angle: -14, dist: 0.48, zone: 'left' },
+      { id: '二', label: 'セカンド', angle: 14, dist: 0.48, zone: 'right' },
+      { id: '一', label: 'ファースト', angle: 32, dist: 0.44, zone: 'right' },
+      { id: '投', label: 'ピッチャー', angle: 0, dist: 0.34, zone: 'center' },
+      { id: '捕', label: 'キャッチャー', angle: 0, dist: 0.14, zone: 'center' }
+    ];
+
+    const OUTCOMES = [
+      { id: '安', label: '単打', type: 'hit', bases: 1, color: 'bg-blue-600 text-white' },
+      { id: '二', label: '二塁打', type: 'hit', bases: 2, color: 'bg-orange-500 text-white' },
+      { id: '三', label: '三塁打', type: 'hit', bases: 3, color: 'bg-orange-600 text-white' },
+      { id: '本', label: '本塁打', type: 'hit', bases: 4, color: 'bg-rose-600 text-white font-black' },
+      { id: 'ゴ', label: 'ゴロ', type: 'out', bases: 0, color: 'bg-slate-200 text-slate-700' },
+      { id: '飛', label: 'フライ', type: 'out', bases: 0, color: 'bg-slate-200 text-slate-700' },
+      { id: '邪飛', label: '邪飛', type: 'out', bases: 0, color: 'bg-slate-200 text-slate-700' },
+      { id: '直', label: 'ライナー', type: 'out', bases: 0, color: 'bg-slate-200 text-slate-700' },
+      { id: '三振', label: '三振', type: 'out', noDir: true, bases: 0, color: 'bg-slate-300 text-slate-800' },
+      { id: '四球', label: '四球', type: 'bb', noDir: true, bases: 0, color: 'bg-teal-600 text-white' },
+      { id: '死球', label: '死球', type: 'bb', noDir: true, bases: 0, color: 'bg-teal-700 text-white' },
+      { id: '犠', label: '犠打', type: 'sac', bases: 0, color: 'bg-emerald-100 text-emerald-800' },
+      { id: '犠飛', label: '犠飛', type: 'sf', bases: 0, color: 'bg-emerald-100 text-emerald-800' },
+      { id: '失', label: '失策出塁', type: 'err', bases: 0, color: 'bg-purple-100 text-purple-800' },
+      { id: '振逃', label: '振り逃げ', type: 'err', noDir: true, bases: 0, color: 'bg-purple-100 text-purple-800' }
+    ];
+
+    const DEFAULT_MY_TEAMS = [
+      { id: 'team1', short: 'NGS', name: '成実五千石尚徳スポーツ少年団', badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+      { id: 'team2', short: '選抜', name: '選抜チーム', badgeClass: 'bg-blue-100 text-blue-800 border-blue-200' }
+    ];
+
+    const POSITIONS = [
+      { id: '投', label: 'ピッチャー' },
+      { id: '捕', label: 'キャッチャー' },
+      { id: '一', label: 'ファースト' },
+      { id: '二', label: 'セカンド' },
+      { id: '三', label: 'サード' },
+      { id: '遊', label: 'ショート' },
+      { id: '左', label: 'レフト' },
+      { id: '中', label: 'センター' },
+      { id: '右', label: 'ライト' },
+      { id: '指/控', label: 'DH・控え' }
+    ];
+
+    // 配布版専用ストレージキー（初期試合データゼロ）
+    const STORAGE_KEY = 'diamond_log_dist_v1';
+
+    const DIAL_YEARS = [2024, 2025, 2026, 2027];
+    const DIAL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    function generateRandomRoomId() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return `DL-${code}`;
+    }
+
+    // ==================== アプリ状態（初期試合ゼロ） ====================
+    let state = {
+      roomId: '',
+      myTeams: JSON.parse(JSON.stringify(DEFAULT_MY_TEAMS)),
+      playerName: '選手名',
+      playerNumber: '1',
+      games: [], // 初期試合リストは完全に空
+      filterTeam: 'all',
+      filterPeriodMode: 'all',
+      filterStartYear: 2026,
+      filterStartMonth: 11,
+      tempDialMode: 'all',
+      tempDialYear: 2026,
+      tempDialMonth: 11,
+      sprayTypeFilter: 'all',
+      selectedFormMyTeamId: 'team1',
+      editingPositions: [],
+      editingAtBats: [],
+      editingAtBatIndex: -1,
+      selectedDir: '左',
+      customCoord: null,
+      orderType: '先攻',
+      steppers: { rbi: 0, runs: 0, steals: 0, caughtStealing: 0, errors: 0 }
+    };
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let unsubscribeRoom = null;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'diamond-log-app';
+
+    // ==================== 初期化・同期 ====================
+    async function initApp() {
+      loadFromLocalStorage();
+
+      const hashRoom = window.location.hash.replace('#', '').trim().toUpperCase();
+      if (hashRoom) {
+        state.roomId = hashRoom;
+      } else if (!state.roomId) {
+        state.roomId = generateRandomRoomId();
+      }
+      saveToLocalStorage();
+      updateRoomIdUI();
+
+      initPeriodWheelDOM();
+      setupEventListeners();
+      renderAll();
+
+      // Firebase初期化（RULE 3: Auth完了後にFirestore操作）
+      try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+          const firebaseConfig = JSON.parse(__firebase_config);
+          const app = initializeApp(firebaseConfig);
+          db = getFirestore(app);
+          auth = getAuth(app);
+
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            const cred = await signInWithCustomToken(auth, __initial_auth_token);
+            currentUser = cred.user;
+          } else {
+            const cred = await signInAnonymously(auth);
+            currentUser = cred.user;
+          }
+          subscribeToRoom(state.roomId);
+        } else {
+          setSyncStatus('connected', 'ローカル保存');
+        }
+      } catch (err) {
+        console.warn('Firebase fallback to local mode:', err);
+        setSyncStatus('connected', 'ローカル保存');
+      }
+    }
+
+    function loadFromLocalStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.roomId) state.roomId = parsed.roomId;
+          if (Array.isArray(parsed.myTeams) && parsed.myTeams.length > 0) state.myTeams = parsed.myTeams;
+          if (parsed.playerName) state.playerName = parsed.playerName;
+          if (parsed.playerNumber !== undefined) state.playerNumber = parsed.playerNumber;
+          if (Array.isArray(parsed.games)) state.games = parsed.games;
+        }
+      } catch (e) {}
+    }
+
+    function saveToLocalStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          roomId: state.roomId,
+          myTeams: state.myTeams,
+          playerName: state.playerName,
+          playerNumber: state.playerNumber,
+          games: state.games
+        }));
+      } catch (e) {}
+    }
+
+    function subscribeToRoom(roomId) {
+      if (!db || !currentUser || !roomId) return;
+      if (unsubscribeRoom) unsubscribeRoom();
+
+      setSyncStatus('syncing', '同期中...');
+      const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+
+      unsubscribeRoom = onSnapshot(roomDocRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (Array.isArray(data.myTeams) && data.myTeams.length > 0) state.myTeams = data.myTeams;
+          if (data.playerName) state.playerName = data.playerName;
+          if (data.playerNumber !== undefined) state.playerNumber = data.playerNumber;
+          if (Array.isArray(data.games)) state.games = data.games;
+          saveToLocalStorage();
+          renderAll();
+          setSyncStatus('connected', '同期完了');
+        } else {
+          if (state.games.length > 0) {
+            pushStateToFirestore();
+          } else {
+            setSyncStatus('connected', '同期完了');
+          }
+        }
+      }, (error) => {
+        console.error('Firestore snapshot error:', error);
+        setSyncStatus('connected', 'ローカル保存');
+      });
+    }
+
+    async function pushStateToFirestore() {
+      saveToLocalStorage();
+      if (!db || !currentUser || !state.roomId) {
+        setSyncStatus('connected', 'ローカル保存');
+        return;
+      }
+      try {
+        setSyncStatus('syncing', '同期中...');
+        const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', state.roomId);
+        await setDoc(roomDocRef, {
+          myTeams: state.myTeams,
+          playerName: state.playerName,
+          playerNumber: state.playerNumber,
+          games: state.games,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        setSyncStatus('connected', '同期完了');
+      } catch (e) {
+        console.error('Firestore save error:', e);
+        setSyncStatus('connected', 'ローカル保存');
+      }
+    }
+
+    function setSyncStatus(status, label) {
+      const dot = document.getElementById('sync-dot');
+      const text = document.getElementById('sync-label');
+      const settingsBadge = document.getElementById('settings-sync-status');
+      if (text) text.textContent = label;
+      if (settingsBadge) settingsBadge.textContent = label;
+      if (dot) {
+        dot.className = 'w-2 h-2 rounded-full shrink-0 ' + (status === 'syncing' ? 'bg-amber-400 animate-ping' : 'bg-turf-400');
+      }
+    }
+
+    // ==================== iPhone風 期間ドラムロールダイヤル ====================
+    function initPeriodWheelDOM() {
+      const yearWheel = document.getElementById('wheel-year');
+      const monthWheel = document.getElementById('wheel-month');
+      if (!yearWheel || !monthWheel) return;
+
+      yearWheel.innerHTML = DIAL_YEARS.map(y =>
+        `<div class="wheel-item text-base font-black text-slate-700" data-val="${y}">${y}年</div>`
+      ).join('');
+
+      monthWheel.innerHTML = DIAL_MONTHS.map(m =>
+        `<div class="wheel-item text-base font-black text-slate-700" data-val="${m}">${m}月〜</div>`
+      ).join('');
+    }
+
+    window.openPeriodDialModal = function() {
+      state.tempDialMode = state.filterPeriodMode;
+      state.tempDialYear = state.filterStartYear;
+      state.tempDialMonth = state.filterStartMonth;
+
+      document.getElementById('period-dial-modal').classList.remove('hidden');
+
+      setTimeout(() => {
+        const yIdx = Math.max(0, DIAL_YEARS.indexOf(state.tempDialYear));
+        const mIdx = Math.max(0, DIAL_MONTHS.indexOf(state.tempDialMonth));
+        document.getElementById('wheel-year').scrollTop = yIdx * 40;
+        document.getElementById('wheel-month').scrollTop = mIdx * 40;
+        updateDialPreviewUI();
+      }, 20);
+    };
+
+    window.closePeriodDialModal = function() {
+      document.getElementById('period-dial-modal').classList.add('hidden');
+    };
+
+    window.handleWheelScroll = function(type) {
+      if (type === 'year') {
+        const el = document.getElementById('wheel-year');
+        const idx = Math.min(DIAL_YEARS.length - 1, Math.max(0, Math.round(el.scrollTop / 40)));
+        state.tempDialYear = DIAL_YEARS[idx];
+      } else {
+        const el = document.getElementById('wheel-month');
+        const idx = Math.min(DIAL_MONTHS.length - 1, Math.max(0, Math.round(el.scrollTop / 40)));
+        state.tempDialMonth = DIAL_MONTHS[idx];
+      }
+      state.tempDialMode = 'since';
+      updateDialPreviewUI();
+    };
+
+    window.selectPeriodPreset = function(preset) {
+      if (preset === 'all') {
+        state.tempDialMode = 'all';
+      } else if (preset === '2026-11') {
+        state.tempDialMode = 'since';
+        state.tempDialYear = 2026;
+        state.tempDialMonth = 11;
+      } else if (preset === '2025-11') {
+        state.tempDialMode = 'since';
+        state.tempDialYear = 2025;
+        state.tempDialMonth = 11;
+      }
+
+      if (state.tempDialMode === 'since') {
+        const yIdx = Math.max(0, DIAL_YEARS.indexOf(state.tempDialYear));
+        const mIdx = Math.max(0, DIAL_MONTHS.indexOf(state.tempDialMonth));
+        document.getElementById('wheel-year').scrollTo({ top: yIdx * 40, behavior: 'smooth' });
+        document.getElementById('wheel-month').scrollTo({ top: mIdx * 40, behavior: 'smooth' });
+      }
+      updateDialPreviewUI();
+    };
+
+    function updateDialPreviewUI() {
+      const preview = document.getElementById('dial-preview-text');
+      const btnAll = document.getElementById('preset-all-btn');
+      const btn2611 = document.getElementById('preset-202611-btn');
+      const btn2511 = document.getElementById('preset-202511-btn');
+
+      const activeCls = 'py-2.5 px-2 rounded-xl text-xs font-black border border-navy-900 bg-navy-900 text-turf-400 transition';
+      const normalCls = 'py-2.5 px-2 rounded-xl text-xs font-extrabold border border-slate-200 bg-slate-50 text-slate-600 transition';
+
+      btnAll.className = state.tempDialMode === 'all' ? activeCls : normalCls;
+      btn2611.className = (state.tempDialMode === 'since' && state.tempDialYear === 2026 && state.tempDialMonth === 11) ? activeCls : normalCls;
+      btn2511.className = (state.tempDialMode === 'since' && state.tempDialYear === 2025 && state.tempDialMonth === 11) ? activeCls : normalCls;
+
+      if (state.tempDialMode === 'all') {
+        preview.textContent = '全期間';
+      } else {
+        preview.textContent = `${state.tempDialYear}年 ${state.tempDialMonth}月 〜`;
+      }
+
+      document.querySelectorAll('#wheel-year .wheel-item').forEach(el => {
+        const isSel = state.tempDialMode === 'since' && Number(el.dataset.val) === state.tempDialYear;
+        el.className = `wheel-item ${isSel ? 'text-lg font-black text-navy-900 scale-105' : 'text-sm font-bold text-slate-400'}`;
+      });
+      document.querySelectorAll('#wheel-month .wheel-item').forEach(el => {
+        const isSel = state.tempDialMode === 'since' && Number(el.dataset.val) === state.tempDialMonth;
+        el.className = `wheel-item ${isSel ? 'text-lg font-black text-navy-900 scale-105' : 'text-sm font-bold text-slate-400'}`;
+      });
+    }
+
+    window.applyPeriodDialSelection = function() {
+      state.filterPeriodMode = state.tempDialMode;
+      state.filterStartYear = state.tempDialYear;
+      state.filterStartMonth = state.tempDialMonth;
+      closePeriodDialModal();
+      renderAll();
+    };
+
+    function getCurrentPeriodLabel() {
+      if (state.filterPeriodMode === 'all') return '全期間';
+      return `${state.filterStartYear}年${state.filterStartMonth}月〜`;
+    }
+
+    // ==================== 共通フィルター＆描画 ====================
+    window.syncTeamFilter = function(value) {
+      state.filterTeam = value;
+      renderAll();
+    };
+
+    function getMyTeamById(id) {
+      return state.myTeams.find(t => t.id === id) || state.myTeams[0] || DEFAULT_MY_TEAMS[0];
+    }
+
+    function normalizeGamePositions(game) {
+      if (Array.isArray(game.positions) && game.positions.length > 0) {
+        return game.positions;
+      }
+      if (typeof game.position === 'string' && game.position.trim()) {
+        return game.position.split(/\s*→\s*/).filter(Boolean);
+      }
+      return [];
+    }
+
+    function getFilteredGames() {
+      let list = [...state.games];
+      if (state.filterTeam !== 'all') {
+        list = list.filter(g => (g.myTeamId || state.myTeams[0]?.id) === state.filterTeam);
+      }
+      if (state.filterPeriodMode === 'since') {
+        const mm = String(state.filterStartMonth).padStart(2, '0');
+        const startStr = `${state.filterStartYear}-${mm}-01`;
+        list = list.filter(g => g.date && g.date >= startStr);
+      }
+      return list;
+    }
+
+    window.renderAll = function() {
+      document.getElementById('header-player-name').textContent = state.playerName || '選手名';
+      document.getElementById('header-player-number').textContent = state.playerNumber ? `#${state.playerNumber}` : '';
+      document.getElementById('header-team-summary').textContent = state.myTeams.map(t => t.short || t.name.slice(0, 4)).join(' / ');
+
+      document.getElementById('setting-player-name').value = state.playerName;
+      document.getElementById('setting-player-number').value = state.playerNumber;
+
+      state.games.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const teamSelectIds = ['filter-games-team', 'filter-stats-team', 'filter-spray-team'];
+      teamSelectIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = `<option value="all">所属: すべて（合計）</option>` +
+          state.myTeams.map(t => `<option value="${t.id}">所属: ${t.short}</option>`).join('');
+        el.value = state.myTeams.some(t => t.id === state.filterTeam) ? state.filterTeam : 'all';
+      });
+
+      const periodLabel = `期間: ${getCurrentPeriodLabel()}`;
+      ['filter-games-period-label', 'filter-stats-period-label', 'filter-spray-period-label'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = periodLabel;
+      });
+
+      renderSettingsMyTeams();
+      renderGamesList();
+      renderStatsDashboard();
+      renderSprayChart();
+    };
+
+    function renderGamesList() {
+      const container = document.getElementById('games-list-container');
+      const filtered = getFilteredGames();
+      document.getElementById('games-count-badge').textContent = `${filtered.length}試合表示`;
+
+      if (state.games.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-3xl p-7 text-center border border-slate-200/80 shadow-sm space-y-4">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-turf-100 text-turf-600 flex items-center justify-center">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M7.5 4.8C9.2 7.2 9.2 16.8 7.5 19.2" stroke-dasharray="2 2"/>
+                <path d="M16.5 4.8C14.8 7.2 14.8 16.8 16.5 19.2" stroke-dasharray="2 2"/>
+              </svg>
+            </div>
+            <div class="space-y-1.5">
+              <h2 class="text-base font-black text-navy-900">Diamond Log へようこそ！</h2>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                まだ試合結果が登録されていません。<br>
+                右上の<strong>「＋ 試合追加」</strong>ボタンから、最初の試合結果や打席記録を入力してみましょう！
+              </p>
+            </div>
+            <div class="pt-1 flex flex-col sm:flex-row gap-2 justify-center">
+              <button type="button" onclick="openGameModal()" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-5 py-3 rounded-xl shadow-md shadow-turf-500/20 active:scale-95 transition">
+                ＋ 最初の試合を記録する
+              </button>
+              <button type="button" onclick="switchTab('settings')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs px-4 py-3 rounded-xl transition">
+                選手名・家族共有の設定へ
+              </button>
+            </div>
+          </div>`;
+        return;
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl p-8 text-center border border-slate-200/80 space-y-3">
+            <p class="text-sm font-extrabold text-slate-500">選択中のフィルター条件に一致する試合記録がありません</p>
+            <button type="button" onclick="openGameModal()" class="bg-turf-500 text-navy-950 font-black text-xs px-4 py-2.5 rounded-xl shadow">＋ 試合を追加する</button>
+          </div>`;
+        return;
+      }
+
+      let currentYearHeader = '';
+      container.innerHTML = filtered.map(game => {
+        const myTeam = getMyTeamById(game.myTeamId);
+        const isWin = Number(game.myScore) > Number(game.oppScore);
+        const isLose = Number(game.myScore) < Number(game.oppScore);
+        const resultBadge = isWin
+          ? `<span class="bg-turf-500 text-navy-950 font-black text-[10px] px-2 py-0.5 rounded-md tracking-wider shrink-0">WIN</span>`
+          : isLose
+            ? `<span class="bg-rose-500 text-white font-black text-[10px] px-2 py-0.5 rounded-md tracking-wider shrink-0">LOSE</span>`
+            : `<span class="bg-slate-400 text-white font-black text-[10px] px-2 py-0.5 rounded-md tracking-wider shrink-0">DRAW</span>`;
+
+        const d = new Date(game.date);
+        const yearStr = `${d.getFullYear()}年`;
+        let yearDivider = '';
+        if (yearStr !== currentYearHeader) {
+          currentYearHeader = yearStr;
+          yearDivider = `<div class="text-xs font-black text-slate-400 px-1 pt-1">${yearStr}</div>`;
+        }
+        const dateStr = `${d.getMonth() + 1}月${d.getDate()}日`;
+
+        const atBatBadges = (game.atBats || []).map(ab => {
+          const outObj = OUTCOMES.find(o => o.id === ab.outcome) || { type: 'out' };
+          let badgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
+          if (outObj.type === 'hit') {
+            badgeClass = outObj.bases === 4
+              ? 'bg-rose-50 text-rose-600 border-rose-200 font-black'
+              : outObj.bases >= 2
+                ? 'bg-orange-50 text-orange-600 border-orange-200 font-extrabold'
+                : 'bg-blue-50 text-blue-600 border-blue-200 font-extrabold';
+          } else if (outObj.type === 'bb') {
+            badgeClass = 'bg-teal-50 text-teal-700 border-teal-200 font-bold';
+          }
+          return `<span class="text-xs px-2 py-0.5 rounded-lg border ${badgeClass}">${ab.label}</span>`;
+        }).join('');
+
+        const posList = normalizeGamePositions(game);
+        const posBadgeHtml = posList.length > 0
+          ? `<span class="inline-flex items-center gap-1 bg-slate-100 text-navy-900 font-extrabold text-[10px] px-2 py-0.5 rounded-md border border-slate-200 shrink-0">${posList.join(' → ')}</span>`
+          : '';
+
+        const hasFooter = game.battingOrder || posBadgeHtml || game.location || game.memo || game.rbi || game.steals;
+
+        return `
+          ${yearDivider}
+          <div onclick="openGameModal('${game.id}')" class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 hover:border-turf-400 active:scale-[0.99] transition cursor-pointer">
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div class="flex items-center space-x-1.5 min-w-0">
+                <span class="text-xs font-extrabold text-slate-400 whitespace-nowrap">${dateStr}</span>
+                ${resultBadge}
+                <span class="text-base font-black text-navy-900 font-display whitespace-nowrap">${game.myScore} - ${game.oppScore}</span>
+                <span class="text-sm font-black text-slate-800 truncate">vs ${game.opponent}</span>
+              </div>
+              <span class="text-[10px] font-black px-2 py-0.5 rounded-md border whitespace-nowrap shrink-0 ${myTeam.badgeClass}">${myTeam.short}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5 ${hasFooter ? 'mb-2' : ''}">
+              ${atBatBadges || '<span class="text-xs text-slate-400">打席記録なし</span>'}
+            </div>
+            ${hasFooter ? `
+              <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1.5 border-t border-slate-100 gap-2">
+                <div class="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                  ${game.battingOrder ? `<span class="font-extrabold text-slate-600 shrink-0">${game.battingOrder}</span>` : ''}
+                  ${posBadgeHtml}
+                  ${game.memo ? `<span class="text-slate-500 truncate">${game.memo}</span>` : ''}
+                  ${game.location ? `<span class="text-slate-400 truncate">＠${game.location}</span>` : ''}
+                </div>
+                <span class="font-bold text-slate-600 whitespace-nowrap shrink-0">
+                  ${game.rbi ? `打点${game.rbi} ` : ''}${game.steals ? `盗塁${game.steals}` : ''}
+                </span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderStatsDashboard() {
+      const games = getFilteredGames();
+      let wins = 0, losses = 0, draws = 0;
+      let pa = 0, ab = 0, hits = 0, singles = 0, doubles = 0, triples = 0, hrs = 0;
+      let so = 0, bb = 0, sac = 0, sf = 0, rbi = 0, runs = 0, steals = 0, cs = 0, errors = 0;
+
+      games.forEach(g => {
+        if (Number(g.myScore) > Number(g.oppScore)) wins++;
+        else if (Number(g.myScore) < Number(g.oppScore)) losses++;
+        else draws++;
+
+        rbi += Number(g.rbi || 0);
+        runs += Number(g.runs || 0);
+        steals += Number(g.steals || 0);
+        cs += Number(g.caughtStealing || 0);
+        errors += Number(g.errors || 0);
+
+        (g.atBats || []).forEach(item => {
+          pa++;
+          const outObj = OUTCOMES.find(o => o.id === item.outcome);
+          if (!outObj) return;
+
+          if (outObj.type === 'hit') {
+            ab++;
+            hits++;
+            if (outObj.bases === 1) singles++;
+            if (outObj.bases === 2) doubles++;
+            if (outObj.bases === 3) triples++;
+            if (outObj.bases === 4) hrs++;
+          } else if (outObj.type === 'out') {
+            ab++;
+            if (item.outcome === '三振') so++;
+          } else if (outObj.type === 'err') {
+            ab++;
+          } else if (outObj.type === 'bb') {
+            bb++;
+          } else if (outObj.type === 'sac') {
+            sac++;
+          } else if (outObj.type === 'sf') {
+            sf++;
+          }
+        });
+      });
+
+      const totalBases = singles + (doubles * 2) + (triples * 3) + (hrs * 4);
+      const avg = ab > 0 ? (hits / ab) : 0;
+      const obpDenom = ab + bb + sf;
+      const obp = obpDenom > 0 ? ((hits + bb) / obpDenom) : 0;
+      const slg = ab > 0 ? (totalBases / ab) : 0;
+      const ops = obp + slg;
+      const isod = obp - avg;
+      const isop = slg - avg;
+
+      const winDenom = wins + losses;
+      const winRate = winDenom > 0 ? (wins / winDenom) : 0;
+      const fmtRate = (val) => {
+        if (!Number.isFinite(val) || val <= 0) return '.000';
+        return val >= 1 ? val.toFixed(3) : val.toFixed(3).replace(/^0/, '');
+      };
+
+      document.getElementById('stats-team-record').textContent = `${wins}勝 ${losses}敗 ${draws}分`;
+      document.getElementById('stats-win-rate').textContent = fmtRate(winRate);
+      document.getElementById('stat-avg').textContent = fmtRate(avg);
+      document.getElementById('stat-hits-ab').textContent = `${hits}安打 / ${ab}打数`;
+      document.getElementById('stat-obp').textContent = fmtRate(obp);
+      document.getElementById('stat-slg').textContent = fmtRate(slg);
+      document.getElementById('stat-ops').textContent = fmtRate(ops);
+      document.getElementById('stat-ops-rank').textContent =
+        ab === 0 ? '打席記録から自動計算' :
+        ops >= 1.000 ? '🔥 超高校級スラッガー' :
+        ops >= 0.800 ? '✨ チームの中軸打者' : '⚾ 好調キープ';
+
+      const detailItems = [
+        { label: '試合数', val: games.length },
+        { label: '打席', val: pa },
+        { label: '打数', val: ab },
+        { label: '安打', val: hits, highlight: hits > 0 },
+        { label: '二塁打', val: doubles },
+        { label: '三塁打', val: triples },
+        { label: '本塁打', val: hrs, highlight: hrs > 0 },
+        { label: '打点', val: rbi, highlight: rbi > 0 },
+        { label: '得点', val: runs },
+        { label: '盗塁', val: steals, highlight: steals > 0 },
+        { label: '四死球', val: bb },
+        { label: '三振', val: so },
+        { label: '犠打', val: sac },
+        { label: '犠飛', val: sf },
+        { label: '盗塁死', val: cs },
+        { label: '失策', val: errors },
+        { label: 'IsoD', val: fmtRate(Math.max(0, isod)) },
+        { label: 'IsoP', val: fmtRate(Math.max(0, isop)) }
+      ];
+
+      document.getElementById('detailed-stats-grid').innerHTML = detailItems.map(d => `
+        <div class="bg-slate-50 rounded-xl p-2.5 text-center border border-slate-100">
+          <div class="text-[11px] font-bold text-slate-400">${d.label}</div>
+          <div class="text-base font-black ${d.highlight ? 'text-turf-600' : 'text-slate-800'} font-display mt-0.5">${d.val}</div>
+        </div>
+      `).join('');
+
+      const teamLabel = state.filterTeam === 'all' ? 'すべてのチーム（合計）' : getMyTeamById(state.filterTeam).name;
+      const periodLabel = getCurrentPeriodLabel();
+
+      document.getElementById('card-team-label').textContent = teamLabel;
+      document.getElementById('card-period-label').textContent = periodLabel;
+      document.getElementById('card-player-title').textContent = `${state.playerName} ${state.playerNumber ? '#' + state.playerNumber : ''}`;
+      document.getElementById('card-avg').textContent = fmtRate(avg);
+      document.getElementById('card-hits-ab').textContent = `${hits}安打 / ${ab}打数`;
+      document.getElementById('card-ops').textContent = fmtRate(ops);
+      document.getElementById('card-obp-slg').textContent = `出塁${fmtRate(obp)} / 長打${fmtRate(slg)}`;
+      document.getElementById('card-2b').textContent = doubles;
+      document.getElementById('card-3b').textContent = triples;
+      document.getElementById('card-hr').textContent = hrs;
+      document.getElementById('card-rbi').textContent = rbi;
+      document.getElementById('card-bb').textContent = bb;
+      document.getElementById('card-sb').textContent = steals;
+      document.getElementById('card-obp').textContent = fmtRate(obp);
+      document.getElementById('card-slg').textContent = fmtRate(slg);
+    }
+
+    function renderSprayChart() {
+      const layer = document.getElementById('spray-lines-layer');
+      layer.innerHTML = '';
+
+      const games = getFilteredGames();
+      let leftCount = 0, centerCount = 0, rightCount = 0;
+
+      games.forEach(g => {
+        (g.atBats || []).forEach((ab, idx) => {
+          if (!ab.dir) return;
+          const dirObj = DIRECTIONS.find(d => d.id === ab.dir);
+          const outObj = OUTCOMES.find(o => o.id === ab.outcome);
+          if (!dirObj || !outObj) return;
+
+          if (state.sprayTypeFilter === 'hits' && outObj.type !== 'hit') return;
+          if (state.sprayTypeFilter === 'xbh' && (outObj.type !== 'hit' || outObj.bases < 2)) return;
+          if (state.sprayTypeFilter === 'outs' && outObj.type === 'hit') return;
+
+          const angleDeg = ab.customAngle !== undefined ? ab.customAngle : dirObj.angle;
+          const distRatio = ab.customDist !== undefined ? ab.customDist : dirObj.dist;
+
+          if (angleDeg < -11) leftCount++;
+          else if (angleDeg > 11) rightCount++;
+          else centerCount++;
+
+          const seed = ab.customAngle !== undefined ? 0 : ((g.id.charCodeAt(g.id.length - 1) + idx * 7) % 9 - 4) * 1.3;
+          const rad = ((angleDeg + seed) - 90) * (Math.PI / 180);
+
+          let maxLen = 215 * distRatio;
+          if (ab.customDist === undefined) {
+            if (outObj.bases === 4) maxLen = 235;
+            else if (outObj.bases >= 2) maxLen = Math.max(maxLen, 195);
+          }
+
+          const startX = 180, startY = 308;
+          const endX = startX + Math.cos(rad) * maxLen;
+          const endY = startY + Math.sin(rad) * maxLen;
+
+          let strokeColor = '#cbd5e1';
+          let strokeWidth = '2';
+          let opacity = '0.68';
+          if (outObj.type === 'hit') {
+            if (outObj.bases === 4) {
+              strokeColor = '#f43f5e';
+              strokeWidth = '3.6';
+              opacity = '0.98';
+            } else if (outObj.bases >= 2) {
+              strokeColor = '#f97316';
+              strokeWidth = '3.2';
+              opacity = '0.95';
+            } else {
+              strokeColor = '#3b82f6';
+              strokeWidth = '2.8';
+              opacity = '0.92';
+            }
+          }
+
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', startX);
+          line.setAttribute('y1', startY);
+          line.setAttribute('x2', endX.toFixed(1));
+          line.setAttribute('y2', endY.toFixed(1));
+          line.setAttribute('stroke', strokeColor);
+          line.setAttribute('stroke-width', strokeWidth);
+          line.setAttribute('stroke-linecap', 'round');
+          line.setAttribute('opacity', opacity);
+          layer.appendChild(line);
+
+          const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          dot.setAttribute('cx', endX.toFixed(1));
+          dot.setAttribute('cy', endY.toFixed(1));
+          dot.setAttribute('r', outObj.type === 'hit' ? '3.8' : '2.3');
+          dot.setAttribute('fill', strokeColor);
+          layer.appendChild(dot);
+        });
+      });
+
+      const total = leftCount + centerCount + rightCount;
+      if (total > 0) {
+        const lPct = Math.round((leftCount / total) * 100);
+        const cPct = Math.round((centerCount / total) * 100);
+        const rPct = 100 - lPct - cPct;
+
+        document.getElementById('spray-left-pct').textContent = `${lPct}%`;
+        document.getElementById('spray-center-pct').textContent = `${cPct}%`;
+        document.getElementById('spray-right-pct').textContent = `${rPct}%`;
+
+        document.getElementById('spray-bar-left').style.width = `${lPct}%`;
+        document.getElementById('spray-bar-center').style.width = `${cPct}%`;
+        document.getElementById('spray-bar-right').style.width = `${rPct}%`;
+
+        const badge = document.getElementById('spray-tendency-badge');
+        if (lPct >= 50) badge.textContent = '🔥 プルヒッター（引っ張り）';
+        else if (rPct >= 45) badge.textContent = '✨ 流し打ち職人';
+        else badge.textContent = '⚾ 広角スプレーヒッター';
+      } else {
+        document.getElementById('spray-left-pct').textContent = '0%';
+        document.getElementById('spray-center-pct').textContent = '0%';
+        document.getElementById('spray-right-pct').textContent = '0%';
+        document.getElementById('spray-bar-left').style.width = '33.3%';
+        document.getElementById('spray-bar-center').style.width = '33.3%';
+        document.getElementById('spray-bar-right').style.width = '33.4%';
+        document.getElementById('spray-tendency-badge').textContent = '打球記録待ち';
+      }
+    }
+
+    // ==================== 試合入力・編集モーダル ====================
+    function renderFormMyTeamSelector() {
+      const container = document.getElementById('form-myteam-selector');
+      container.innerHTML = state.myTeams.map(t => {
+        const isSelected = state.selectedFormMyTeamId === t.id;
+        return `
+          <button type="button" onclick="selectFormMyTeam('${t.id}')" class="px-3.5 py-2.5 rounded-xl text-xs font-black text-left transition flex items-center justify-between gap-2 ${isSelected ? 'bg-turf-500 text-navy-950 shadow-md ring-2 ring-turf-400' : 'bg-white/10 text-slate-200 hover:bg-white/20'}">
+            <span class="truncate"><span class="opacity-80 mr-1">[${t.short}]</span>${t.name}</span>
+            ${isSelected ? '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : '<span class="text-[10px] opacity-60">選択</span>'}
+          </button>
+        `;
+      }).join('');
+    }
+
+    window.selectFormMyTeam = function(teamId) {
+      state.selectedFormMyTeamId = teamId;
+      renderFormMyTeamSelector();
+    };
+
+    function renderFormPositionsUI() {
+      const chainContainer = document.getElementById('form-positions-chain');
+      const btnsContainer = document.getElementById('form-position-buttons');
+      if (!chainContainer || !btnsContainer) return;
+
+      const circNums = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
+
+      if (state.editingPositions.length === 0) {
+        chainContainer.innerHTML = `<span class="text-[11px] font-bold text-slate-400 px-1">下のボタンからスタメン守備位置をタップして追加</span>`;
+      } else {
+        chainContainer.innerHTML = state.editingPositions.map((posId, idx) => {
+          const posObj = POSITIONS.find(p => p.id === posId) || { id: posId, label: posId };
+          const numMark = circNums[idx] || `${idx + 1}.`;
+          const arrow = idx < state.editingPositions.length - 1
+            ? `<span class="text-xs font-black text-slate-400">→</span>`
+            : '';
+          return `
+            <span class="inline-flex items-center gap-1 bg-navy-900 text-white text-[11px] font-extrabold pl-2 pr-1.5 py-1 rounded-lg shadow-sm">
+              <span class="text-turf-400">${numMark}</span>
+              <span>${posObj.id}（${posObj.label}）</span>
+              <button type="button" onclick="removeFormPosition(${idx})" class="ml-0.5 text-slate-400 hover:text-rose-400 p-0.5 leading-none" aria-label="削除">×</button>
+            </span>
+            ${arrow}
+          `;
+        }).join('');
+      }
+
+      btnsContainer.innerHTML = POSITIONS.map(p => {
+        const count = state.editingPositions.filter(id => id === p.id).length;
+        return `
+          <button type="button" onclick="addFormPosition('${p.id}')" class="py-2 px-1 rounded-xl border text-center transition active:scale-95 flex flex-col items-center justify-center ${count > 0 ? 'bg-turf-100/70 border-turf-500 text-navy-900 font-black' : 'bg-white border-slate-200 text-slate-700 font-bold hover:bg-slate-100'}">
+            <span class="text-xs leading-tight">${p.id}</span>
+            <span class="text-[9px] text-slate-500 leading-tight mt-0.5 truncate max-w-full">${p.label}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    window.addFormPosition = function(posId) {
+      state.editingPositions.push(posId);
+      renderFormPositionsUI();
+    };
+
+    window.removeFormPosition = function(idx) {
+      state.editingPositions.splice(idx, 1);
+      renderFormPositionsUI();
+    };
+
+    window.clearFormPositions = function() {
+      state.editingPositions = [];
+      renderFormPositionsUI();
+    };
+
+    window.openGameModal = function(gameId = null) {
+      const modal = document.getElementById('game-modal');
+      const deleteContainer = document.getElementById('delete-game-container');
+      renderHistoryChips();
+
+      if (gameId) {
+        const game = state.games.find(g => g.id === gameId);
+        if (!game) return;
+        document.getElementById('game-modal-title').textContent = '試合結果の編集';
+        document.getElementById('edit-game-id').value = game.id;
+        state.selectedFormMyTeamId = game.myTeamId || state.myTeams[0]?.id || 'team1';
+        document.getElementById('form-date').value = game.date;
+        document.getElementById('form-opponent').value = game.opponent;
+        document.getElementById('form-my-score').value = game.myScore;
+        document.getElementById('form-opp-score').value = game.oppScore;
+        document.getElementById('form-batting-order').value = game.battingOrder || '';
+        state.editingPositions = [...normalizeGamePositions(game)];
+        document.getElementById('form-location').value = game.location || '';
+        document.getElementById('form-memo').value = game.memo || '';
+        setOrderType(game.orderType || '先攻');
+        state.editingAtBats = JSON.parse(JSON.stringify(game.atBats || []));
+        state.steppers = {
+          rbi: game.rbi || 0,
+          runs: game.runs || 0,
+          steals: game.steals || 0,
+          caughtStealing: game.caughtStealing || 0,
+          errors: game.errors || 0
+        };
+        deleteContainer.classList.remove('hidden');
+      } else {
+        document.getElementById('game-modal-title').textContent = '新しい試合を記録';
+        document.getElementById('edit-game-id').value = '';
+        state.selectedFormMyTeamId = state.filterTeam !== 'all' ? state.filterTeam : (state.myTeams[0]?.id || 'team1');
+        document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('form-opponent').value = '';
+        document.getElementById('form-my-score').value = 0;
+        document.getElementById('form-opp-score').value = 0;
+        document.getElementById('form-batting-order').value = '';
+        state.editingPositions = [];
+        document.getElementById('form-location').value = '';
+        document.getElementById('form-memo').value = '';
+        setOrderType('先攻');
+        state.editingAtBats = [];
+        state.steppers = { rbi: 0, runs: 0, steals: 0, caughtStealing: 0, errors: 0 };
+        deleteContainer.classList.add('hidden');
+      }
+
+      updateScoreResultPreview();
+      renderFormMyTeamSelector();
+      renderFormPositionsUI();
+      renderFormAtBats();
+      renderFormSteppers();
+      modal.classList.remove('hidden');
+    };
+
+    window.closeGameModal = function() {
+      document.getElementById('game-modal').classList.add('hidden');
+    };
+
+    window.setOrderType = function(type) {
+      state.orderType = type;
+      const btn1 = document.getElementById('btn-order-first');
+      const btn2 = document.getElementById('btn-order-second');
+      if (type === '先攻') {
+        btn1.className = 'py-1.5 rounded-lg text-xs font-black bg-white text-navy-900 shadow-sm';
+        btn2.className = 'py-1.5 rounded-lg text-xs font-bold text-slate-500';
+      } else {
+        btn2.className = 'py-1.5 rounded-lg text-xs font-black bg-white text-navy-900 shadow-sm';
+        btn1.className = 'py-1.5 rounded-lg text-xs font-bold text-slate-500';
+      }
+    };
+
+    window.stepScore = function(who, delta) {
+      const input = document.getElementById(who === 'my' ? 'form-my-score' : 'form-opp-score');
+      input.value = Math.max(0, Number(input.value || 0) + delta);
+      updateScoreResultPreview();
+    };
+
+    window.updateScoreResultPreview = function() {
+      const my = Number(document.getElementById('form-my-score').value || 0);
+      const opp = Number(document.getElementById('form-opp-score').value || 0);
+      const badge = document.getElementById('form-result-preview');
+      if (my > opp) {
+        badge.textContent = 'WIN（勝利）';
+        badge.className = 'text-[11px] font-black px-2 py-0.5 rounded bg-turf-100 text-turf-600';
+      } else if (my < opp) {
+        badge.textContent = 'LOSE（敗戦）';
+        badge.className = 'text-[11px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-600';
+      } else {
+        badge.textContent = 'DRAW（引き分け）';
+        badge.className = 'text-[11px] font-black px-2 py-0.5 rounded bg-slate-200 text-slate-700';
+      }
+    };
+
+    function renderHistoryChips() {
+      const opps = [...new Set(state.games.map(g => g.opponent).filter(Boolean))].slice(0, 6);
+      document.getElementById('opponent-history-chips').innerHTML = opps.map(o =>
+        `<button type="button" onclick="document.getElementById('form-opponent').value='${o}'" class="shrink-0 text-[11px] font-bold bg-slate-100 hover:bg-turf-100 text-slate-600 px-2.5 py-1 rounded-lg transition">${o}</button>`
+      ).join('');
+
+      const locs = [...new Set(state.games.map(g => g.location).filter(Boolean))].slice(0, 5);
+      document.getElementById('location-history-chips').innerHTML = locs.map(l =>
+        `<button type="button" onclick="document.getElementById('form-location').value='${l}'" class="shrink-0 text-[11px] font-bold bg-slate-100 hover:bg-turf-100 text-slate-600 px-2.5 py-1 rounded-lg transition">${l}</button>`
+      ).join('');
+    }
+
+    function renderFormAtBats() {
+      const container = document.getElementById('form-atbats-list');
+      if (state.editingAtBats.length === 0) {
+        container.innerHTML = `<div class="text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs font-bold text-slate-400">右上の「＋ 打席追加」から第1打席を入力</div>`;
+        return;
+      }
+
+      container.innerHTML = state.editingAtBats.map((ab, idx) => {
+        const outObj = OUTCOMES.find(o => o.id === ab.outcome) || { type: 'out' };
+        const pillColor = outObj.type === 'hit'
+          ? (outObj.bases === 4 ? 'bg-rose-600 text-white' : outObj.bases >= 2 ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white')
+          : outObj.type === 'bb' ? 'bg-teal-600 text-white' : 'bg-slate-200 text-slate-800';
+        return `
+          <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <div onclick="openAtBatPicker(${idx})" class="flex items-center space-x-3 flex-1 cursor-pointer">
+              <span class="text-xs font-extrabold text-slate-500 w-14">第${idx + 1}打席</span>
+              <span class="text-xs font-black px-3 py-1 rounded-lg ${pillColor}">${ab.label}</span>
+              <span class="text-[11px] text-slate-400">タップで修正</span>
+            </div>
+            <button type="button" onclick="removeAtBat(${idx})" class="text-slate-400 hover:text-rose-500 p-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.removeAtBat = function(idx) {
+      state.editingAtBats.splice(idx, 1);
+      renderFormAtBats();
+    };
+
+    function renderFormSteppers() {
+      const items = [
+        { key: 'rbi', label: '打点' },
+        { key: 'runs', label: '得点' },
+        { key: 'steals', label: '盗塁' },
+        { key: 'caughtStealing', label: '盗塁死' },
+        { key: 'errors', label: '失策' }
+      ];
+      document.getElementById('form-steppers-container').innerHTML = items.map(it => `
+        <div class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+          <span class="text-xs font-bold text-slate-600">${it.label}</span>
+          <div class="flex items-center space-x-2">
+            <button type="button" onclick="updateFormStepper('${it.key}', -1)" class="w-7 h-7 rounded-lg bg-white border border-slate-300 font-black text-slate-700">-</button>
+            <span class="w-5 text-center text-sm font-black text-navy-900">${state.steppers[it.key]}</span>
+            <button type="button" onclick="updateFormStepper('${it.key}', 1)" class="w-7 h-7 rounded-lg bg-navy-900 text-white font-black">+</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.updateFormStepper = function(key, delta) {
+      state.steppers[key] = Math.max(0, (state.steppers[key] || 0) + delta);
+      renderFormSteppers();
+    };
+
+    // ==================== 2タップ＆ミニグラウンド打席ピッカー ====================
+    window.openAtBatPicker = function(idx) {
+      state.editingAtBatIndex = idx;
+      const num = idx === -1 ? state.editingAtBats.length + 1 : idx + 1;
+      document.getElementById('atbat-picker-title').textContent = `第${num}打席の方向と結果`;
+
+      if (idx >= 0 && state.editingAtBats[idx]?.dir) {
+        const existing = state.editingAtBats[idx];
+        state.selectedDir = existing.dir;
+        state.customCoord = existing.customAngle !== undefined ? { angle: existing.customAngle, dist: existing.customDist } : null;
+      } else {
+        state.selectedDir = '左';
+        state.customCoord = null;
+      }
+
+      renderPickerButtons();
+      updateMiniFieldPreview();
+      document.getElementById('atbat-picker-modal').classList.remove('hidden');
+    };
+
+    window.closeAtBatPicker = function() {
+      document.getElementById('atbat-picker-modal').classList.add('hidden');
+    };
+
+    window.selectPickerDir = function(dirId) {
+      state.selectedDir = dirId;
+      state.customCoord = null;
+      document.getElementById('picker-coord-status').textContent = '方向ボタン連動中';
+      renderPickerButtons();
+      updateMiniFieldPreview();
+    };
+
+    window.handleMiniFieldTap = function(evt) {
+      const svg = document.getElementById('mini-field-svg');
+      const rect = svg.getBoundingClientRect();
+      const x = ((evt.clientX - rect.left) / rect.width) * 200;
+      const y = ((evt.clientY - rect.top) / rect.height) * 180;
+
+      const dx = x - 100;
+      const dy = 165 - y;
+      if (dy <= 5) return;
+
+      let angle = Math.atan2(dx, dy) * (180 / Math.PI);
+      angle = Math.max(-44, Math.min(44, angle));
+      const dist = Math.max(0.15, Math.min(1.05, Math.sqrt(dx * dx + dy * dy) / 120));
+
+      state.customCoord = { angle: Math.round(angle), dist: Number(dist.toFixed(2)) };
+
+      if (dist < 0.22) state.selectedDir = '捕';
+      else if (dist < 0.56) {
+        if (angle < -22) state.selectedDir = '三';
+        else if (angle < -5) state.selectedDir = '遊';
+        else if (angle <= 5) state.selectedDir = '投';
+        else if (angle <= 22) state.selectedDir = '二';
+        else state.selectedDir = '一';
+      } else {
+        if (angle < -24) state.selectedDir = '左';
+        else if (angle < -8) state.selectedDir = '左中';
+        else if (angle <= 8) state.selectedDir = '中';
+        else if (angle <= 24) state.selectedDir = '右中';
+        else state.selectedDir = '右';
+      }
+
+      document.getElementById('picker-coord-status').textContent = 'タップ位置に微調整済';
+      renderPickerButtons();
+      updateMiniFieldPreview();
+    };
+
+    function updateMiniFieldPreview() {
+      const dirObj = DIRECTIONS.find(d => d.id === state.selectedDir) || DIRECTIONS[0];
+      const angle = state.customCoord ? state.customCoord.angle : dirObj.angle;
+      const dist = state.customCoord ? state.customCoord.dist : dirObj.dist;
+      const rad = (angle - 90) * (Math.PI / 180);
+      const len = 115 * dist;
+      const ex = 100 + Math.cos(rad) * len;
+      const ey = 164 + Math.sin(rad) * len;
+
+      const line = document.getElementById('mini-spray-line');
+      const dot = document.getElementById('mini-spray-dot');
+      if (line && dot) {
+        line.setAttribute('x2', ex.toFixed(1));
+        line.setAttribute('y2', ey.toFixed(1));
+        dot.setAttribute('cx', ex.toFixed(1));
+        dot.setAttribute('cy', ey.toFixed(1));
+      }
+    }
+
+    window.selectPickerOutcome = function(outcomeId) {
+      const outObj = OUTCOMES.find(o => o.id === outcomeId);
+      if (!outObj) return;
+
+      const dir = outObj.noDir ? '' : state.selectedDir;
+      const label = outObj.noDir ? outObj.id : `${dir}${outObj.id}`;
+      const newRecord = { dir, outcome: outObj.id, label };
+      if (!outObj.noDir && state.customCoord) {
+        newRecord.customAngle = state.customCoord.angle;
+        newRecord.customDist = state.customCoord.dist;
+      }
+
+      if (state.editingAtBatIndex === -1) {
+        state.editingAtBats.push(newRecord);
+      } else {
+        state.editingAtBats[state.editingAtBatIndex] = newRecord;
+      }
+
+      closeAtBatPicker();
+      renderFormAtBats();
+    };
+
+    function renderPickerButtons() {
+      document.getElementById('picker-directions').innerHTML = DIRECTIONS.map(d => {
+        const isSel = state.selectedDir === d.id;
+        return `
+          <button type="button" onclick="selectPickerDir('${d.id}')" class="py-2 px-1 rounded-xl text-xs font-extrabold border transition ${isSel ? 'bg-navy-900 text-turf-400 border-navy-900 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}">
+            ${d.label}
+          </button>
+        `;
+      }).join('');
+
+      document.getElementById('picker-outcomes').innerHTML = OUTCOMES.map(o => `
+        <button type="button" onclick="selectPickerOutcome('${o.id}')" class="py-2.5 px-1 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition ${o.color}">
+          ${o.label}
+        </button>
+      `).join('');
+    }
+
+    // ==================== 保存・削除・所属チーム管理 ====================
+    window.saveGameForm = async function() {
+      const date = document.getElementById('form-date').value;
+      const opponent = document.getElementById('form-opponent').value.trim();
+      if (!date || !opponent) {
+        showToast('試合日と相手チームを入力してください');
+        return;
+      }
+
+      const editId = document.getElementById('edit-game-id').value;
+      const posChain = [...state.editingPositions];
+      const gameData = {
+        id: editId || 'g_' + Date.now(),
+        myTeamId: state.selectedFormMyTeamId,
+        date,
+        opponent,
+        myScore: Number(document.getElementById('form-my-score').value || 0),
+        oppScore: Number(document.getElementById('form-opp-score').value || 0),
+        orderType: state.orderType,
+        battingOrder: document.getElementById('form-batting-order').value,
+        positions: posChain,
+        position: posChain.join(' → '),
+        location: document.getElementById('form-location').value.trim(),
+        atBats: state.editingAtBats,
+        rbi: state.steppers.rbi,
+        runs: state.steppers.runs,
+        steals: state.steppers.steals,
+        caughtStealing: state.steppers.caughtStealing,
+        errors: state.steppers.errors,
+        memo: document.getElementById('form-memo').value.trim()
+      };
+
+      if (editId) {
+        const idx = state.games.findIndex(g => g.id === editId);
+        if (idx >= 0) state.games[idx] = gameData;
+      } else {
+        state.games.unshift(gameData);
+      }
+
+      closeGameModal();
+      renderAll();
+      await pushStateToFirestore();
+      showToast('試合結果を保存しました！');
+    };
+
+    window.deleteCurrentGame = async function() {
+      const editId = document.getElementById('edit-game-id').value;
+      if (!editId) return;
+      state.games = state.games.filter(g => g.id !== editId);
+      closeGameModal();
+      renderAll();
+      await pushStateToFirestore();
+      showToast('試合データを削除しました');
+    };
+
+    function renderSettingsMyTeams() {
+      const container = document.getElementById('settings-myteams-list');
+      if (!container) return;
+      container.innerHTML = state.myTeams.map((t, idx) => `
+        <div class="flex items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200 gap-2">
+          <input type="text" value="${t.short}" maxlength="4" onchange="updateMyTeamShort(${idx}, this.value)" placeholder="略称" class="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-black text-center text-navy-900 outline-none focus:ring-2 focus:ring-turf-500 shrink-0" />
+          <input type="text" value="${t.name}" onchange="renameMyTeam(${idx}, this.value)" placeholder="正式チーム名" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-turf-500" />
+          ${state.myTeams.length > 1 ? `
+            <button type="button" onclick="removeMyTeam(${idx})" class="text-[11px] font-bold text-rose-500 hover:text-rose-700 px-1.5 py-1 whitespace-nowrap shrink-0">削除</button>
+          ` : '<span class="text-[10px] text-slate-400 whitespace-nowrap shrink-0 px-1">基本</span>'}
+        </div>
+      `).join('');
+    }
+
+    window.updateMyTeamShort = async function(idx, newShort) {
+      const trimmed = newShort.trim().slice(0, 4);
+      if (!trimmed || !state.myTeams[idx]) return;
+      state.myTeams[idx].short = trimmed;
+      renderAll();
+      await pushStateToFirestore();
+      showToast(`略称を「${trimmed}」に変更しました`);
+    };
+
+    window.renameMyTeam = async function(idx, newName) {
+      const trimmed = newName.trim();
+      if (!trimmed || !state.myTeams[idx]) return;
+      state.myTeams[idx].name = trimmed;
+      renderAll();
+      await pushStateToFirestore();
+      showToast('正式チーム名を更新しました');
+    };
+
+    window.addMyTeam = async function() {
+      const shortInput = document.getElementById('new-myteam-short');
+      const nameInput = document.getElementById('new-myteam-name');
+      const name = nameInput.value.trim();
+      const short = (shortInput.value.trim() || name).slice(0, 4);
+      if (!name) {
+        showToast('追加する所属チーム名を入力してください');
+        return;
+      }
+      const colors = [
+        'bg-amber-100 text-amber-800 border-amber-200',
+        'bg-purple-100 text-purple-800 border-purple-200',
+        'bg-teal-100 text-teal-800 border-teal-200'
+      ];
+      state.myTeams.push({
+        id: 'team_' + Date.now(),
+        short: short,
+        name: name,
+        badgeClass: colors[state.myTeams.length % colors.length]
+      });
+      shortInput.value = '';
+      nameInput.value = '';
+      renderAll();
+      await pushStateToFirestore();
+      showToast(`所属チーム「${short}（${name}）」を追加しました`);
+    };
+
+    window.removeMyTeam = async function(idx) {
+      if (state.myTeams.length <= 1) return;
+      state.myTeams.splice(idx, 1);
+      if (!state.myTeams.some(t => t.id === state.filterTeam)) {
+        state.filterTeam = 'all';
+      }
+      renderAll();
+      await pushStateToFirestore();
+      showToast('所属チームを削除しました');
+    };
+
+    window.saveProfileSettings = async function() {
+      state.playerName = document.getElementById('setting-player-name').value.trim() || '選手名';
+      state.playerNumber = document.getElementById('setting-player-number').value.trim();
+      renderAll();
+      await pushStateToFirestore();
+      showToast('選手プロフィールを保存しました');
+    };
+
+    function updateRoomIdUI() {
+      const display = document.getElementById('current-room-id-display');
+      if (display) display.textContent = state.roomId;
+      window.location.hash = state.roomId;
+    }
+
+    window.copyShareUrl = function() {
+      const baseUrl = window.location.href.split('#')[0];
+      const shareUrl = `${baseUrl}#${state.roomId}`;
+      const temp = document.createElement('textarea');
+      temp.value = shareUrl;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      showToast('家族共有用URLをコピーしました！LINE等で送れます');
+    };
+
+    window.joinRoom = function() {
+      const input = document.getElementById('join-room-input').value.trim().toUpperCase();
+      if (!input) {
+        showToast('共有ルームIDを入力してください');
+        return;
+      }
+      state.roomId = input;
+      updateRoomIdUI();
+      saveToLocalStorage();
+      subscribeToRoom(state.roomId);
+      showToast(`ルーム「${state.roomId}」に接続しました！`);
+    };
+
+    window.openShareCardModal = function() {
+      renderStatsDashboard();
+      document.getElementById('share-card-modal').classList.remove('hidden');
+    };
+
+    window.closeShareCardModal = function() {
+      document.getElementById('share-card-modal').classList.add('hidden');
+    };
+
+    window.shareStatsText = function() {
+      const avg = document.getElementById('stat-avg').textContent;
+      const ops = document.getElementById('stat-ops').textContent;
+      const hitsAb = document.getElementById('stat-hits-ab').textContent;
+      const record = document.getElementById('stats-team-record').textContent;
+      const teamLabel = state.filterTeam === 'all' ? 'すべてのチーム（合計）' : getMyTeamById(state.filterTeam).name;
+
+      const text = `⚾【${state.playerName} 打撃成績レポート】\n所属: ${teamLabel} (${getCurrentPeriodLabel()})\n試合成績: ${record}\n打率: ${avg} (${hitsAb})\nOPS: ${ops}\n\n#少年野球 #DiamondLog`;
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      showToast('成績テキストをコピーしました！LINE等に貼り付けできます');
+    };
+
+    window.exportDataJson = function() {
+      const payload = {
+        playerName: state.playerName,
+        playerNumber: state.playerNumber,
+        myTeams: state.myTeams,
+        games: state.games
+      };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+      const a = document.createElement('a');
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", `diamond_log_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast('JSONバックアップを保存しました');
+    };
+
+    window.importDataJson = function(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed)) {
+            state.games = parsed;
+          } else if (parsed && Array.isArray(parsed.games)) {
+            state.games = parsed.games;
+            if (Array.isArray(parsed.myTeams) && parsed.myTeams.length > 0) state.myTeams = parsed.myTeams;
+            if (parsed.playerName) state.playerName = parsed.playerName;
+            if (parsed.playerNumber !== undefined) state.playerNumber = parsed.playerNumber;
+          } else {
+            showToast('読み込めないファイル形式です');
+            return;
+          }
+          renderAll();
+          await pushStateToFirestore();
+          showToast('バックアップデータを復元しました！');
+        } catch (err) {
+          showToast('JSONファイルの読み込みに失敗しました');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    };
+
+    // ==================== ナビゲーション・イベント ====================
+    window.switchTab = function(tabName) {
+      ['games', 'stats', 'spray', 'settings'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${t}`);
+        navBtn.classList.remove('text-navy-900', 'active');
+        navBtn.classList.add('text-slate-400');
+      });
+
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`nav-${tabName}`);
+      activeBtn.classList.remove('text-slate-400');
+      activeBtn.classList.add('text-navy-900', 'active');
+
+      if (tabName === 'spray') renderSprayChart();
+      if (tabName === 'stats') renderStatsDashboard();
+    };
+
+    function setupEventListeners() {
+      document.querySelectorAll('.stype-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.stype-btn').forEach(b => {
+            b.className = 'stype-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 whitespace-nowrap transition';
+          });
+          btn.className = 'stype-btn active px-3 py-1.5 rounded-xl text-xs font-extrabold bg-navy-900 text-white whitespace-nowrap transition';
+          state.sprayTypeFilter = btn.dataset.stype;
+          renderSprayChart();
+        });
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => toast.classList.add('opacity-0'), 3000);
+    }
+
+    window.onload = initApp;
+  </script>
+</body>
+</html>
