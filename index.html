@@ -2,10 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>DIAMOND LOG | 少年野球 打撃成績記録ログ</title>
-
-  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Diamond Log | 少年野球 打撃成績＆リアルタイム共有</title>
 
   <!-- iOS / Android PWA 全画面スタンドアロン設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,7 +11,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Diamond Log" />
   <meta name="theme-color" content="#0f172a" />
-  
+  <link rel="apple-touch-icon" href="icon.png" />
+  <link rel="icon" type="image/png" href="icon.png" />
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
   <script>
@@ -51,6 +51,10 @@
     }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    /* iPhone ノッチ / Dynamic Island 対応のセーフエリア余白 */
+    .header-safe-top {
+      padding-top: calc(env(safe-area-inset-top, 10px) + 10px);
+    }
     .pb-safe-main {
       padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 96px);
     }
@@ -76,6 +80,74 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+
+    /* ▼▼ テーマカラー着せ替え用 CSS変数＆オーバーライド ▼▼ */
+    :root {
+      --theme-main: #0f172a;
+      --theme-main-sub: #1e293b;
+      --theme-accent: #10b981;
+      --theme-accent-hover: #34d399;
+      --theme-accent-text: #059669;
+      --theme-accent-contrast: #080d1a;
+      --theme-light: #d1fae5;
+      --theme-border: rgba(52, 211, 153, 0.35);
+    }
+
+    header.bg-navy-900,
+    #game-modal .bg-navy-900,
+    #atbat-picker-modal .bg-navy-900,
+    #toast.bg-navy-900 {
+      background-color: var(--theme-main) !important;
+      transition: background-color 0.25s ease;
+    }
+
+    #tab-stats .from-navy-900,
+    #tab-settings .from-navy-900,
+    #game-modal .from-navy-900 {
+      background-image: linear-gradient(135deg, var(--theme-main), var(--theme-main-sub)) !important;
+    }
+
+    .bg-turf-500,
+    .from-turf-400.to-turf-600 {
+      background-color: var(--theme-accent) !important;
+      background-image: none !important;
+      color: var(--theme-accent-contrast) !important;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .bg-turf-400 {
+      background-color: var(--theme-accent) !important;
+    }
+
+    .text-turf-400 {
+      color: var(--theme-accent) !important;
+    }
+
+    .text-turf-600 {
+      color: var(--theme-accent-text) !important;
+    }
+
+    .bg-turf-100 {
+      background-color: var(--theme-light) !important;
+    }
+
+    .nav-btn.active {
+      color: var(--theme-main) !important;
+    }
+
+    .stype-btn.active {
+      background-color: var(--theme-main) !important;
+      color: #ffffff !important;
+    }
+
+    #spray-bar-left {
+      background-color: var(--theme-accent) !important;
+    }
+
+    #sync-badge,
+    #share-card-modal .border-turf-400\/40 {
+      border-color: var(--theme-border) !important;
+    }
   </style>
 </head>
 <body class="antialiased select-none">
@@ -83,10 +155,10 @@
   <!-- メインアプリコンテナ -->
   <div id="app" class="max-w-lg mx-auto min-h-screen bg-slate-100 relative shadow-2xl flex flex-col">
 
-    <!-- トップヘッダー -->
-    <header class="sticky top-0 z-30 bg-navy-900 text-white px-3.5 py-3 shadow-lg border-b border-white/10">
+    <!-- トップヘッダー（PWA全画面時のステータスバー領域を自動保護） -->
+    <header class="sticky top-0 z-30 bg-navy-900 text-white px-3.5 pb-3 header-safe-top shadow-lg border-b border-white/10">
       <div class="flex items-center justify-between gap-2">
-        <!-- 左：選手・所属チーム概要 -->
+        <!-- 左：アプリタイトル＆選手・所属チーム概要 -->
         <div class="flex items-center space-x-2.5 min-w-0 flex-1">
           <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-turf-400 to-turf-600 flex items-center justify-center shadow-inner shrink-0">
             <svg class="w-5 h-5 text-navy-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
@@ -97,10 +169,13 @@
           </div>
           <div class="min-w-0 flex-1">
             <div class="flex items-center space-x-1.5">
+              <span class="text-[9px] font-black tracking-widest uppercase text-turf-400 leading-none">DIAMOND LOG</span>
+            </div>
+            <div class="flex items-center space-x-1.5 mt-0.5">
               <h1 id="header-player-name" class="text-sm sm:text-base font-black tracking-tight leading-none truncate">エース</h1>
               <span id="header-player-number" class="text-[10px] font-extrabold bg-white/15 text-turf-400 px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap">#10</span>
             </div>
-            <p id="header-team-summary" class="text-[11px] text-slate-300 truncate mt-1">NGS / 4年選抜 / 5年選抜</p>
+            <p id="header-team-summary" class="text-[10px] text-slate-300 truncate mt-0.5">NGS / 4年選抜 / 5年選抜</p>
           </div>
         </div>
 
@@ -135,7 +210,7 @@
 
           <div class="grid grid-cols-2 gap-2">
             <select id="filter-games-team" onchange="syncTeamFilter(this.value)" class="w-full bg-slate-100 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-turf-500">
-              <option value="all">所属: すべて</option>
+              <option value="all">所属: すべて（合計）</option>
             </select>
             <button type="button" onclick="openPeriodDialModal()" class="w-full bg-slate-100 hover:bg-slate-200/80 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 flex items-center justify-between gap-1 transition">
               <span id="filter-games-period-label" class="truncate">期間: 全期間</span>
@@ -159,12 +234,12 @@
             </span>
             <button type="button" onclick="openShareCardModal()" class="bg-gradient-to-r from-amber-300 to-amber-400 hover:from-amber-400 hover:to-amber-500 text-navy-950 font-black text-[11px] px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1 whitespace-nowrap shrink-0 active:scale-95 transition">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-              <span>画像風カードでシェア</span>
+              <span>成績カード表示</span>
             </button>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <select id="filter-stats-team" onchange="syncTeamFilter(this.value)" class="w-full bg-slate-100 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-turf-500">
-              <option value="all">所属: すべて</option>
+              <option value="all">所属: すべて（合計）</option>
             </select>
             <button type="button" onclick="openPeriodDialModal()" class="w-full bg-slate-100 hover:bg-slate-200/80 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 flex items-center justify-between gap-1 transition">
               <span id="filter-stats-period-label" class="truncate">期間: 全期間</span>
@@ -222,7 +297,7 @@
         <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
           <div class="grid grid-cols-2 gap-2">
             <select id="filter-spray-team" onchange="syncTeamFilter(this.value)" class="w-full bg-slate-100 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-turf-500">
-              <option value="all">所属: すべて</option>
+              <option value="all">所属: すべて（合計）</option>
             </select>
             <button type="button" onclick="openPeriodDialModal()" class="w-full bg-slate-100 hover:bg-slate-200/80 text-navy-900 text-xs font-extrabold rounded-xl px-3 py-2.5 flex items-center justify-between gap-1 transition">
               <span id="filter-spray-period-label" class="truncate">期間: 全期間</span>
@@ -309,7 +384,7 @@
 
       <!-- ==================== 4. 共有・設定タブ ==================== -->
       <section id="tab-settings" class="p-4 space-y-4 hidden animate-fade-in">
-        <!-- リアルタイムデータ共有カード -->
+        <!-- 1) リアルタイムデータ共有カード -->
         <div class="bg-gradient-to-br from-navy-900 to-navy-800 rounded-2xl p-4 text-white shadow-md border border-white/10 space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -319,26 +394,26 @@
             <span id="settings-sync-status" class="text-[10px] font-extrabold bg-white/10 text-turf-400 px-2.5 py-0.5 rounded-full">同期完了</span>
           </div>
           <p class="text-xs text-slate-300 leading-relaxed">
-            下の<strong>「共有ルームID（合言葉）」</strong>を家族や共有メンバーのiPhone側で入力して接続すると、試合の追加・編集・チーム設定がリアルタイムで自動同期されます。
+            下の<strong>「共有URLをコピー」</strong>からリンクを送るか、<strong>「共有ルームID」</strong>を家族・メンバー側のiPhoneで入力して接続すると、試合の追加・編集がリアルタイムで自動同期されます。
           </p>
           <div class="bg-navy-950/60 border border-white/15 rounded-xl p-3 flex items-center justify-between gap-2">
             <div>
               <span class="text-[10px] font-bold text-slate-400 block">現在の共有ルームID</span>
-              <span id="current-room-id-display" class="text-base font-black tracking-wider text-turf-400 font-display">NGS-2026</span>
+              <span id="current-room-id-display" class="text-base font-black tracking-wider text-turf-400 font-display">NGS-haru</span>
             </div>
-            <button type="button" onclick="copyRoomId()" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-3.5 py-2 rounded-xl whitespace-nowrap active:scale-95 transition">
-              IDをコピー
+            <button type="button" onclick="copyShareUrl()" class="bg-turf-500 hover:bg-turf-400 text-navy-950 font-black text-xs px-3.5 py-2 rounded-xl whitespace-nowrap active:scale-95 transition">
+              共有URLをコピー
             </button>
           </div>
           <div class="pt-1 flex gap-2">
-            <input type="text" id="join-room-input" placeholder="別のルームIDを入力して合流" class="flex-1 bg-white/10 border border-white/15 rounded-xl px-3 py-2.5 text-xs font-bold text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-turf-400 uppercase" />
+            <input type="text" id="join-room-input" placeholder="新しいルームIDを入力して変更・接続" class="flex-1 bg-white/10 border border-white/15 rounded-xl px-3 py-2.5 text-xs font-bold text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-turf-400 uppercase" />
             <button type="button" onclick="joinRoom()" class="bg-white text-navy-900 hover:bg-slate-100 font-black text-xs px-4 py-2.5 rounded-xl whitespace-nowrap active:scale-95 transition">
-              接続する
+              変更・接続
             </button>
           </div>
         </div>
 
-        <!-- 選手プロフィール設定 -->
+        <!-- 2) 選手プロフィール設定 -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
           <h3 class="text-sm font-black text-navy-900">選手プロフィール設定</h3>
           <div class="grid grid-cols-3 gap-2.5">
@@ -356,7 +431,7 @@
           </button>
         </div>
 
-        <!-- 複数所属チームの管理（略称4文字まで＆正式名称） -->
+        <!-- 3) 複数所属チームの管理（略称4文字まで＆正式名称） -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-black text-navy-900">所属チーム管理（略称4文字まで）</h3>
@@ -375,7 +450,33 @@
           </div>
         </div>
 
-        <!-- データ管理 -->
+        <!-- 4) テーマカラー着せ替えカード -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-black text-navy-900">🎨 テーマカラー（チームカラー）</h3>
+              <p class="text-[11px] text-slate-500 mt-0.5">タップするとアプリ全体の配色がリアルタイムに切り替わります</p>
+            </div>
+            <span id="current-theme-badge" class="text-[10px] font-black bg-turf-100 text-turf-600 px-2.5 py-1 rounded-full whitespace-nowrap">フィールドグリーン</span>
+          </div>
+          <div id="theme-palette-grid" class="grid grid-cols-3 gap-2"></div>
+        </div>
+
+        <!-- 5) PWA 全画面アプリ化ガイドカード -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-navy-900 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-turf-500"></span>
+              iPhone全画面アプリ化（URLバー非表示）
+            </h3>
+            <span class="text-[10px] font-extrabold bg-turf-100 text-turf-600 px-2 py-0.5 rounded-full">PWA対応済</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Safariの下部にある<strong>「共有ボタン（□に↑）」</strong>から<strong>「ホーム画面に追加」</strong>をタップすると、URLバーが消えた全画面アプリ（Diamond Log アイコン付き）として起動します。
+          </p>
+        </div>
+
+        <!-- 6) データ管理・移行 -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
           <h3 class="text-sm font-black text-navy-900">データ管理・移行データ復元</h3>
           <div class="grid grid-cols-2 gap-2.5">
@@ -397,7 +498,7 @@
     <nav class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 nav-safe-bottom shadow-[0_-6px_24px_rgba(15,23,42,0.08)]">
       <div class="grid grid-cols-4 pt-2 pb-1">
         <button type="button" onclick="switchTab('games')" id="nav-games" class="nav-btn active flex flex-col items-center justify-center space-y-1 text-navy-900">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 0 012-2h2a2 0 012 2"/></svg>
           <span class="text-[11px] font-black">試合一覧</span>
         </button>
         <button type="button" onclick="switchTab('stats')" id="nav-stats" class="nav-btn flex flex-col items-center justify-center space-y-1 text-slate-400">
@@ -640,7 +741,7 @@
     </div>
   </div>
 
-  <!-- ==================== 画像風成績シェアカードモーダル ==================== -->
+  <!-- ==================== 成績シェアカードモーダル ==================== -->
   <div id="share-card-modal" class="fixed inset-0 z-[65] bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="w-full max-w-sm space-y-3 animate-fade-in">
       <div class="bg-gradient-to-br from-navy-950 via-navy-900 to-emerald-950 text-white rounded-3xl p-5 shadow-2xl border border-turf-400/40 relative overflow-hidden">
@@ -651,7 +752,7 @@
             <h3 id="card-player-title" class="text-xl font-black mt-1.5 tracking-tight">エース #10</h3>
           </div>
           <div class="text-right shrink-0">
-            <span class="text-[9px] font-black tracking-widest text-turf-400 block">DIAMOND NOTE</span>
+            <span class="text-[9px] font-black tracking-widest text-turf-400 block">DIAMOND LOG</span>
             <span id="card-period-label" class="text-xs font-bold text-slate-200">全期間</span>
           </div>
         </div>
@@ -698,6 +799,30 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ==================== PWAアイコン＆Web Manifest動的生成（静的icon.png優先） ====================
+    function setupDynamicPwaAssets() {
+      try {
+        const manifestObj = {
+          name: 'Diamond Log | 少年野球成績',
+          short_name: 'Diamond Log',
+          start_url: window.location.href,
+          display: 'standalone',
+          background_color: '#0f172a',
+          theme_color: '#0f172a',
+          icons: [
+            { src: 'icon.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+        const manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = URL.createObjectURL(manifestBlob);
+        document.head.appendChild(manifestLink);
+      } catch (e) {
+        console.warn('PWA manifest setup skipped:', e);
+      }
+    }
 
     // ==================== マスター定義 ====================
     const DIRECTIONS = [
@@ -751,7 +876,6 @@
       { id: '指/控', label: 'DH・控え' }
     ];
 
-    // 打席文字列（例: "左飛", "一邪飛", "左中三", "四球"）を構造化オブジェクトへ変換
     function parseAtBatLabel(label) {
       if (['三振', '四球', '死球', '振逃'].includes(label)) {
         return { dir: '', outcome: label, label };
@@ -771,7 +895,7 @@
       return { dir: '中', outcome: '安', label };
     }
 
-    // お送りいただいた8枚のスクリーンショット全63試合データ（完全移行版）
+    // 全63試合の移行データ
     const RAW_MIGRATED_GAMES = [
       ['2026-10-11', 1, 7, '車尾', 'ngs', ['左飛', '遊ゴ', '四球'], ''],
       ['2026-10-10', 12, 2, '上道', 'ngs', ['四球', '左二', '投直', '三振'], ''],
@@ -840,7 +964,7 @@
 
     function buildDefaultGames() {
       return RAW_MIGRATED_GAMES.map((row, idx) => ({
-        id: `migrated_v3_${idx + 1}`,
+        id: `migrated_v4_${idx + 1}`,
         date: row[0],
         myScore: row[1],
         oppScore: row[2],
@@ -861,22 +985,106 @@
       }));
     }
 
-    // 新ストレージキー（古い8試合のv1/v2キャッシュを強制上書き）
-    const STORAGE_KEY = 'baseball_stats_v3_55games';
+    const STORAGE_KEY = 'diamond_log_v4_63games';
+    const PREV_V3_KEY = 'baseball_stats_v3_55games';
     const LEGACY_KEYS = ['diamond_note_backup_v1', 'diamond_note_backup_v2', 'diamond_note_games'];
 
     const DIAL_YEARS = [2024, 2025, 2026, 2027];
     const DIAL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
+    const THEME_PRESETS = [
+      {
+        id: 'green',
+        name: 'フィールドグリーン',
+        subLabel: '標準カラー',
+        main: '#0f172a',
+        mainSub: '#1e293b',
+        accent: '#10b981',
+        accentText: '#059669',
+        contrast: '#080d1a',
+        light: '#d1fae5',
+        border: 'rgba(52, 211, 153, 0.35)',
+        swatch: 'linear-gradient(135deg, #0f172a 50%, #10b981 50%)'
+      },
+      {
+        id: 'green-red',
+        name: 'グリーン × レッド',
+        subLabel: '緑＆赤 2色配色',
+        main: '#064e3b',
+        mainSub: '#065f46',
+        accent: '#dc2626',
+        accentText: '#dc2626',
+        contrast: '#ffffff',
+        light: '#fee2e2',
+        border: 'rgba(248, 113, 113, 0.45)',
+        swatch: 'linear-gradient(135deg, #064e3b 50%, #dc2626 50%)'
+      },
+      {
+        id: 'blue',
+        name: 'ロイヤルブルー',
+        subLabel: '青系チーム向け',
+        main: '#1e3a8a',
+        mainSub: '#1d4ed8',
+        accent: '#38bdf8',
+        accentText: '#0284c7',
+        contrast: '#082f49',
+        light: '#e0f2fe',
+        border: 'rgba(56, 189, 248, 0.45)',
+        swatch: 'linear-gradient(135deg, #1e3a8a 50%, #38bdf8 50%)'
+      },
+      {
+        id: 'red',
+        name: 'クリムゾンレッド',
+        subLabel: '赤系チーム向け',
+        main: '#7f1d1d',
+        mainSub: '#991b1b',
+        accent: '#fbbf24',
+        accentText: '#dc2626',
+        contrast: '#450a0a',
+        light: '#fef2f2',
+        border: 'rgba(251, 191, 36, 0.45)',
+        swatch: 'linear-gradient(135deg, #7f1d1d 50%, #ef4444 50%)'
+      },
+      {
+        id: 'navy-gold',
+        name: 'ネイビー × ゴールド',
+        subLabel: '強豪校風カラー',
+        main: '#0f172a',
+        mainSub: '#1e293b',
+        accent: '#f59e0b',
+        accentText: '#b45309',
+        contrast: '#0f172a',
+        light: '#fef3c7',
+        border: 'rgba(245, 158, 11, 0.45)',
+        swatch: 'linear-gradient(135deg, #0f172a 50%, #f59e0b 50%)'
+      },
+      {
+        id: 'sky-yellow',
+        name: 'スカイ × イエロー',
+        subLabel: '爽やか青空カラー',
+        main: '#0369a1',
+        mainSub: '#0284c7',
+        accent: '#facc15',
+        accentText: '#0369a1',
+        contrast: '#0c4a6e',
+        light: '#e0f2fe',
+        border: 'rgba(250, 204, 21, 0.5)',
+        swatch: 'linear-gradient(135deg, #0369a1 50%, #facc15 50%)'
+      }
+    ];
+
+    const THEME_STORAGE_KEY = 'diamond_log_theme_v1';
+
     // ==================== アプリ状態 ====================
     let state = {
-      roomId: 'NGS-2026',
+      roomId: 'NGS-haru',
+      themeId: 'green',
       myTeams: JSON.parse(JSON.stringify(DEFAULT_MY_TEAMS)),
       playerName: 'エース',
       playerNumber: '10',
       games: buildDefaultGames(),
       filterTeam: 'all',
-      filterPeriodMode: 'all', // 'all' or 'since'
+      filterPeriodMode: 'all',
       filterStartYear: 2025,
       filterStartMonth: 11,
       tempDialMode: 'all',
@@ -897,21 +1105,24 @@
     let auth = null;
     let currentUser = null;
     let unsubscribeRoom = null;
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'diamond-note-app';
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'diamond-log-app';
 
-    // ==================== 初期化・強制移行・同期 ====================
+    // ==================== 初期化・移行・同期 ====================
     async function initApp() {
-      // 古いv1/v2キャッシュを削除
+      setupDynamicPwaAssets();
+      initThemeSystem();
+
       LEGACY_KEYS.forEach(k => {
         try { localStorage.removeItem(k); } catch (e) {}
       });
 
-      // v3ストレージの読み込み（未作成または8試合以下の古いデータなら63試合で強制初期化）
-      loadOrMigrateV3Storage();
+      loadOrMigrateV4Storage();
 
-      const hashRoom = window.location.hash.replace('#', '').trim().toUpperCase();
+      const hashRoom = window.location.hash.replace('#', '').trim();
       if (hashRoom) {
         state.roomId = hashRoom;
+      } else if (!state.roomId || state.roomId === 'NGS-2026') {
+        state.roomId = 'NGS-haru';
       }
       updateRoomIdUI();
       initPeriodWheelDOM();
@@ -943,12 +1154,12 @@
       }
     }
 
-    function loadOrMigrateV3Storage() {
+    function loadOrMigrateV4Storage() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && Array.isArray(parsed.games) && parsed.games.length >= 50) {
+        const rawV4 = localStorage.getItem(STORAGE_KEY);
+        if (rawV4) {
+          const parsed = JSON.parse(rawV4);
+          if (parsed && Array.isArray(parsed.games) && parsed.games.length >= 1) {
             if (parsed.roomId) state.roomId = parsed.roomId;
             if (Array.isArray(parsed.myTeams) && parsed.myTeams.length > 0) state.myTeams = parsed.myTeams;
             if (parsed.playerName) state.playerName = parsed.playerName;
@@ -957,9 +1168,22 @@
             return;
           }
         }
+        // v3からの引き継ぎ確認
+        const rawV3 = localStorage.getItem(PREV_V3_KEY);
+        if (rawV3) {
+          const parsedV3 = JSON.parse(rawV3);
+          if (parsedV3 && Array.isArray(parsedV3.games) && parsedV3.games.length >= 50) {
+            if (parsedV3.roomId) state.roomId = parsedV3.roomId;
+            if (Array.isArray(parsedV3.myTeams) && parsedV3.myTeams.length > 0) state.myTeams = parsedV3.myTeams;
+            if (parsedV3.playerName) state.playerName = parsedV3.playerName;
+            if (parsedV3.playerNumber !== undefined) state.playerNumber = parsedV3.playerNumber;
+            state.games = parsedV3.games;
+            saveToLocalStorage();
+            return;
+          }
+        }
       } catch (e) {}
 
-      // 初回または古いデータの場合は全63試合を即時保存
       state.myTeams = JSON.parse(JSON.stringify(DEFAULT_MY_TEAMS));
       state.games = buildDefaultGames();
       saveToLocalStorage();
@@ -968,7 +1192,7 @@
     function saveToLocalStorage() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          version: 3,
+          version: 4,
           roomId: state.roomId,
           myTeams: state.myTeams,
           playerName: state.playerName,
@@ -988,7 +1212,6 @@
       unsubscribeRoom = onSnapshot(roomDocRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
-          // クラウド側に古い8試合データのみが入っていた場合は全63試合データで上書き同期
           if (!Array.isArray(data.games) || data.games.length <= 8) {
             pushStateToFirestore();
             return;
@@ -1128,7 +1351,7 @@
       btn2511.className = (state.tempDialMode === 'since' && state.tempDialYear === 2025 && state.tempDialMonth === 11) ? activeCls : normalCls;
 
       if (state.tempDialMode === 'all') {
-        preview.textContent = '全期間（63試合）';
+        preview.textContent = `全期間（${state.games.length}試合）`;
       } else {
         preview.textContent = `${state.tempDialYear}年 ${state.tempDialMonth}月 〜`;
       }
@@ -1890,7 +2113,7 @@
       `).join('');
     }
 
-    // ==================== 保存・削除・所属チーム管理（略称4文字まで） ====================
+    // ==================== 保存・削除・所属チーム管理 ====================
     window.saveGameForm = async function() {
       const date = document.getElementById('form-date').value;
       const opponent = document.getElementById('form-opponent').value.trim();
@@ -1932,7 +2155,7 @@
       closeGameModal();
       renderAll();
       await pushStateToFirestore();
-      showToast('試合結果を保存し、共有ルームに同期しました！');
+      showToast('試合結果を保存しました！');
     };
 
     window.deleteCurrentGame = async function() {
@@ -2029,18 +2252,73 @@
       window.location.hash = state.roomId;
     }
 
-    window.copyRoomId = function() {
+    function initThemeSystem() {
+      let savedTheme = 'green';
+      try {
+        savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'green';
+      } catch (e) {}
+      renderThemePalette();
+      applyTheme(savedTheme, false);
+    }
+
+    function renderThemePalette() {
+      const grid = document.getElementById('theme-palette-grid');
+      if (!grid) return;
+      grid.innerHTML = THEME_PRESETS.map(t => `
+        <button type="button" onclick="applyTheme('${t.id}')" data-theme-id="${t.id}"
+          class="theme-card-btn flex flex-col items-center p-2.5 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-white active:scale-95 transition">
+          <span class="w-9 h-9 rounded-full shadow-md mb-1.5 border-2 border-white" style="background:${t.swatch}"></span>
+          <span class="text-[11px] font-black text-slate-800 leading-tight text-center">${t.name}</span>
+          <span class="text-[9px] font-bold text-slate-400 mt-0.5">${t.subLabel}</span>
+        </button>
+      `).join('');
+    }
+
+    window.applyTheme = function(themeId, notify = true) {
+      const theme = THEME_PRESETS.find(t => t.id === themeId) || THEME_PRESETS[0];
+      state.themeId = theme.id;
+      const root = document.documentElement;
+      root.style.setProperty('--theme-main', theme.main);
+      root.style.setProperty('--theme-main-sub', theme.mainSub);
+      root.style.setProperty('--theme-accent', theme.accent);
+      root.style.setProperty('--theme-accent-text', theme.accentText);
+      root.style.setProperty('--theme-accent-contrast', theme.contrast);
+      root.style.setProperty('--theme-light', theme.light);
+      root.style.setProperty('--theme-border', theme.border);
+
+      const badge = document.getElementById('current-theme-badge');
+      if (badge) badge.textContent = theme.name;
+
+      document.querySelectorAll('.theme-card-btn').forEach(btn => {
+        const isSelected = btn.dataset.themeId === theme.id;
+        btn.style.borderColor = isSelected ? theme.main : '#e2e8f0';
+        btn.style.backgroundColor = isSelected ? '#ffffff' : '#f8fafc';
+        btn.style.boxShadow = isSelected ? '0 4px 12px rgba(15, 23, 42, 0.12)' : 'none';
+      });
+
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, theme.id);
+      } catch (e) {}
+
+      if (notify) {
+        showToast(`テーマを「${theme.name}」に変更しました`);
+      }
+    };
+
+    window.copyShareUrl = function() {
+      const baseUrl = window.location.href.split('#')[0];
+      const shareUrl = `${baseUrl}#${state.roomId}`;
       const temp = document.createElement('textarea');
-      temp.value = state.roomId;
+      temp.value = shareUrl;
       document.body.appendChild(temp);
       temp.select();
       document.execCommand('copy');
       document.body.removeChild(temp);
-      showToast(`共有ID「${state.roomId}」をコピーしました！`);
+      showToast('共有用URLをコピーしました！LINE等で送れます');
     };
 
     window.joinRoom = function() {
-      const input = document.getElementById('join-room-input').value.trim().toUpperCase();
+      const input = document.getElementById('join-room-input').value.trim();
       if (!input) {
         showToast('共有ルームIDを入力してください');
         return;
@@ -2049,7 +2327,7 @@
       updateRoomIdUI();
       saveToLocalStorage();
       subscribeToRoom(state.roomId);
-      showToast(`ルーム「${state.roomId}」に接続しました！`);
+      showToast(`ルーム「${state.roomId}」に変更・接続しました！`);
     };
 
     window.openShareCardModal = function() {
@@ -2068,7 +2346,7 @@
       const record = document.getElementById('stats-team-record').textContent;
       const teamLabel = state.filterTeam === 'all' ? 'すべてのチーム（合計）' : getMyTeamById(state.filterTeam).name;
 
-      const text = `⚾【${state.playerName} 打撃成績レポート】\n所属: ${teamLabel} (${getCurrentPeriodLabel()})\n試合成績: ${record}\n打率: ${avg} (${hitsAb})\nOPS: ${ops}\n\n#少年野球 #DIAMONDNOTE`;
+      const text = `⚾【${state.playerName} 打撃成績レポート】\n所属: ${teamLabel} (${getCurrentPeriodLabel()})\n試合成績: ${record}\n打率: ${avg} (${hitsAb})\nOPS: ${ops}\n\n#少年野球 #DiamondLog`;
       const temp = document.createElement('textarea');
       temp.value = text;
       document.body.appendChild(temp);
@@ -2082,7 +2360,7 @@
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.games, null, 2));
       const a = document.createElement('a');
       a.setAttribute("href", dataStr);
-      a.setAttribute("download", `diamond_note_${new Date().toISOString().slice(0,10)}.json`);
+      a.setAttribute("download", `diamond_log_${new Date().toISOString().slice(0,10)}.json`);
       document.body.appendChild(a);
       a.click();
       a.remove();
